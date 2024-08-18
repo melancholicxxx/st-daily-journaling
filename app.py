@@ -88,7 +88,7 @@ def delete_entry(entry_id):
 def generate_summary(messages):
     summary_prompt = f"Summarize the main points of the conversation, highlighting key emotions and discussion points. Format the summary as a concise journal entry. Today's date is {today}."
     summary_messages = [
-        {"role": "system", "content": "You are a helpful assistant tasked with summarizing the conversation with a friend for them to log into their reflection journal."},
+        {"role": "system", "content": "You are a helpful assistant tasked with summarizing the conversation for users to then log the summary into their reflection journal."},
         {"role": "user", "content": summary_prompt},
     ] + messages
 
