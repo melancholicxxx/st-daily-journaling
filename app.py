@@ -226,9 +226,9 @@ if st.session_state.user_name:
                 # Save summary to database
                 save_to_db(st.session_state.user_name, summary)
                 
-                st.success("Conversation ended. Here's your journal entry summary:")
+                st.success("Great job reflecting on your day! Here's your journal entry summary:")
                 st.markdown(summary)
-                st.info("Your journal entry has been saved to the database.")
+                st.info("View your past journal entry on the sidebar")
 
         # Display a message if the conversation has ended
         if st.session_state.conversation_ended:
