@@ -82,7 +82,7 @@ def generate_summary(messages):
     ] + messages
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-3.5-turbo",
         messages=summary_messages,
         stream=False,
     )
@@ -113,7 +113,7 @@ with st.sidebar:
         if user_name:
             st.session_state.user_name = user_name
             st.success(f"Welcome, {user_name}!")
-            st.experimental_rerun()
+            st.rerun()
     else:
         st.write(f"Welcome back, {st.session_state.user_name}!")
     
@@ -147,13 +147,13 @@ if st.session_state.user_name:
                 st.session_state.conversation_ended = False
                 st.session_state.messages = []
                 st.session_state.first_response_given = False
-                st.experimental_rerun()
+                st.rerun()
         with col2:
             if st.button("Delete Entry"):
                 delete_entry(entry_id)
                 st.success("Entry deleted successfully!")
                 del st.session_state.selected_entry
-                st.experimental_rerun()
+                st.rerun()
     else:
         # New entry interface
         st.subheader("New Entry")
@@ -189,7 +189,7 @@ if st.session_state.user_name:
 
             # Stream the response
             for chunk in client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-3.5-turbo",
                 messages=messages,
                 stream=True,
             ):
@@ -223,6 +223,6 @@ if st.session_state.user_name:
                 st.session_state.conversation_ended = False
                 st.session_state.messages = []
                 st.session_state.first_response_given = False
-                st.experimental_rerun()
+                st.rerun()
 else:
     st.info("Please enter your name in the sidebar to start journaling.")
