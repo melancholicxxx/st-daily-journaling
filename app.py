@@ -167,7 +167,7 @@ if st.session_state.user_name:
                 st.rerun()
     else:
         # New entry interface
-        st.subheader("New Entry")
+        st.subheader("Share your reflections for today 🧘🏻")
         
         # Display chat messages
         for message in st.session_state.messages:
