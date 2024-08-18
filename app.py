@@ -88,12 +88,12 @@ def delete_entry(entry_id):
 def generate_summary(messages):
     summary_prompt = f"Summarize the main points of the conversation, highlighting key emotions and discussion points. Format the summary as a concise journal entry. Today's date is {today}."
     summary_messages = [
-        {"role": "system", "content": "You are a helpful assistant tasked with summarizing the conversation for users to then log the summary into their reflection journal."},
+        {"role": "system", "content": "You are a helpful assistant tasked with summarizing the conversation for users to then log the summary into their reflection journal. Write in the first-person."},
         {"role": "user", "content": summary_prompt},
     ] + messages
 
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         messages=summary_messages,
         stream=False,
     )
@@ -200,7 +200,7 @@ if st.session_state.user_name:
 
             # Stream the response
             for chunk in client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=messages,
                 stream=True,
             ):
