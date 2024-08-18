@@ -95,7 +95,7 @@ def generate_summary(messages):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=summary_messages,
-        temperature=0.2,
+        temperature=0.1,
         stream=False,
     )
     return response.choices[0].message.content
@@ -203,7 +203,7 @@ if st.session_state.user_name:
             for chunk in client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
-                temperature=0.2,
+                temperature=0.1,
                 stream=True,
             ):
                 if chunk.choices[0].delta.content is not None:
