@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 # Load environment variables
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-today = datetime.today().strftime('%Y-%m-%d')
+today = datetime.today().strftime('%d %B %Y')
 
 # Database setup and functions
 def get_db_connection():
@@ -45,10 +45,11 @@ def init_db():
 def save_to_db(user_name, summary):
     conn = get_db_connection()
     cur = conn.cursor()
-    current_time = datetime.now().strftime('%H:%M:%S')
+    current_date = datetime.now().strftime('%d %B %Y')
+    current_time = datetime.now().strftime('%I:%M%p').lower()
     cur.execute(
         "INSERT INTO logs (user_name, date, time, summary) VALUES (%s, %s, %s, %s)",
-        (user_name, today, current_time, summary)
+        (user_name, current_date, current_time, summary)
     )
     conn.commit()
     cur.close()
@@ -126,7 +127,7 @@ with st.sidebar:
                 if date != current_date:
                     st.subheader(date)
                     current_date = date
-                if st.button(f"Entry at {time}", key=f"view_{entry_id}"):
+                if st.button(f"{time}", key=f"view_{entry_id}"):
                     st.session_state.selected_entry = (entry_id, date, time, summary)
         else:
             st.info("No past entries found.")
