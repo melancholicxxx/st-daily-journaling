@@ -115,6 +115,8 @@ if "conversation_ended" not in st.session_state:
     st.session_state.conversation_ended = False
 if "first_response_given" not in st.session_state:
     st.session_state.first_response_given = False
+if "summary_generated" not in st.session_state:
+    st.session_state.summary_generated = False
 
 # Sidebar for user info and past entries
 with st.sidebar:
@@ -159,6 +161,7 @@ if st.session_state.user_name:
                 st.session_state.conversation_ended = False
                 st.session_state.messages = []
                 st.session_state.first_response_given = False
+                st.session_state.summary_generated = False
                 st.rerun()
         with col2:
             if st.button("Delete Entry"):
@@ -217,7 +220,7 @@ if st.session_state.user_name:
             st.session_state.messages.append({"role": "assistant", "content": full_response})
 
         # End Conversation and Log Journal Entry button
-        if st.session_state.first_response_given and not st.session_state.conversation_ended:
+        if st.session_state.first_response_given and not st.session_state.conversation_ended and not st.session_state.summary_generated:
             if st.button("End Conversation and Log Journal Entry"):
                 st.session_state.conversation_ended = True
                 with st.spinner("Generating your journal entry summary..."):
@@ -229,13 +232,15 @@ if st.session_state.user_name:
                 st.success("Great job reflecting on your day! Here's your journal entry summary:")
                 st.markdown(summary)
                 st.info("View your past journal entry on the sidebar")
+                st.session_state.summary_generated = True
 
         # Display a message if the conversation has ended
         if st.session_state.conversation_ended:
-            if st.button("Start New Entry"):
+            if st.button("Log a New Entry"):
                 st.session_state.conversation_ended = False
                 st.session_state.messages = []
                 st.session_state.first_response_given = False
+                st.session_state.summary_generated = False
                 st.rerun()
 else:
     st.info("Please enter your name in the sidebar to start journaling.")
