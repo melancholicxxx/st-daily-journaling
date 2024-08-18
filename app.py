@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 # Load environment variables
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-today = datetime.today().strftime('%d %B %Y')
+today = datetime.today().strftime('%Y-%m-%d')
 
 # Database setup and functions
 def get_db_connection():
@@ -45,11 +45,10 @@ def init_db():
 def save_to_db(user_name, summary):
     conn = get_db_connection()
     cur = conn.cursor()
-    current_date = datetime.now().strftime('%d %B %Y')
-    current_time = datetime.now().strftime('%I:%M%p').lower()
+    current_time = datetime.now().strftime('%H:%M:%S')
     cur.execute(
         "INSERT INTO logs (user_name, date, time, summary) VALUES (%s, %s, %s, %s)",
-        (user_name, current_date, current_time, summary)
+        (user_name, today, current_time, summary)
     )
     conn.commit()
     cur.close()
@@ -65,7 +64,18 @@ def get_past_entries(user_name):
     entries = cur.fetchall()
     cur.close()
     conn.close()
-    return entries
+    
+    # Format the date and time
+    formatted_entries = []
+    for entry in entries:
+        entry_id, date_str, time_str, summary = entry
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+        time_obj = datetime.strptime(time_str, '%H:%M:%S')
+        formatted_date = date_obj.strftime('%d %B %Y')
+        formatted_time = time_obj.strftime('%I:%M%p').lower()
+        formatted_entries.append((entry_id, formatted_date, formatted_time, summary))
+    
+    return formatted_entries
 
 def delete_entry(entry_id):
     conn = get_db_connection()
@@ -127,7 +137,7 @@ with st.sidebar:
                 if date != current_date:
                     st.subheader(date)
                     current_date = date
-                if st.button(f"{time}", key=f"view_{entry_id}"):
+                if st.button(f"Entry at {time}", key=f"view_{entry_id}"):
                     st.session_state.selected_entry = (entry_id, date, time, summary)
         else:
             st.info("No past entries found.")
