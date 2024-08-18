@@ -162,6 +162,8 @@ if st.session_state.user_name:
                 st.session_state.messages = []
                 st.session_state.first_response_given = False
                 st.session_state.summary_generated = False
+                if 'summary' in st.session_state:
+                    del st.session_state.summary
                 st.rerun()
         with col2:
             if st.button("Delete Entry"):
@@ -229,22 +231,25 @@ if st.session_state.user_name:
                 # Save summary to database
                 save_to_db(st.session_state.user_name, summary)
                 
-                st.success("Great job reflecting on your day! Here's your journal entry summary:")
-                st.markdown(summary)
-                st.info("View your past journal entry on the sidebar")
+                st.session_state.summary = summary
                 st.session_state.summary_generated = True
                 st.rerun()  # Force a rerun to update the UI
 
+        # Display summary if it has been generated
+        if st.session_state.summary_generated:
+            st.success("Great job reflecting on your day! Here's your journal entry summary:")
+            st.markdown(st.session_state.summary)
+            st.info("View your past journal entry on the sidebar")
+
         # Display a message if the conversation has ended
         if st.session_state.conversation_ended:
-            if not st.session_state.summary_generated:
-                st.warning("An error occurred while generating the summary. Please try again.")
-            
             if st.button("Log a New Entry"):
                 st.session_state.conversation_ended = False
                 st.session_state.messages = []
                 st.session_state.first_response_given = False
                 st.session_state.summary_generated = False
+                if 'summary' in st.session_state:
+                    del st.session_state.summary
                 st.rerun()
 else:
     st.info("Please enter your name in the sidebar to start journaling.")
