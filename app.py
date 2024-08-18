@@ -239,7 +239,7 @@ if st.session_state.user_name:
         if st.session_state.summary_generated:
             st.success("Great job reflecting on your day! Here's your journal entry summary:")
             st.markdown(st.session_state.summary)
-            st.info("View your past journal entry on the sidebar")
+            st.info("You can view past journal entries on the left")
 
         # Display a message if the conversation has ended
         if st.session_state.conversation_ended:
