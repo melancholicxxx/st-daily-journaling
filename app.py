@@ -233,9 +233,13 @@ if st.session_state.user_name:
                 st.markdown(summary)
                 st.info("View your past journal entry on the sidebar")
                 st.session_state.summary_generated = True
+                st.rerun()  # Force a rerun to update the UI
 
         # Display a message if the conversation has ended
         if st.session_state.conversation_ended:
+            if not st.session_state.summary_generated:
+                st.warning("An error occurred while generating the summary. Please try again.")
+            
             if st.button("Log a New Entry"):
                 st.session_state.conversation_ended = False
                 st.session_state.messages = []
