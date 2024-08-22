@@ -6,6 +6,21 @@ import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
 
+st.markdown("""
+    <style>
+    .stButton>button {
+        color: white;
+        background-color: #4CAF50;
+        border-color: #4CAF50;
+    }
+    .stButton>button:hover {
+        color: white;
+        background-color: #45a049;
+        border-color: #45a049;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # Load environment variables
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 today = datetime.today().strftime('%Y-%m-%d')
@@ -223,7 +238,7 @@ if st.session_state.user_name:
 
         # End Conversation and Log Journal Entry button
         if st.session_state.first_response_given and not st.session_state.conversation_ended and not st.session_state.summary_generated:
-            if st.button("End Conversation and Log Journal Entry", type="primary"):
+            if st.button("End Conversation and Log Journal Entry"):
                 st.session_state.conversation_ended = True
                 with st.spinner("Generating your journal entry summary..."):
                     summary = generate_summary(st.session_state.messages)
