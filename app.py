@@ -33,6 +33,7 @@ def init_db():
     cur.execute('''
         CREATE TABLE IF NOT EXISTS logs
         (id SERIAL PRIMARY KEY,
+         user_email TEXT,
          user_name TEXT,
          date TEXT,
          time TEXT,
@@ -42,24 +43,24 @@ def init_db():
     cur.close()
     conn.close()
 
-def save_to_db(user_name, summary):
+def save_to_db(user_email, user_name, summary):
     conn = get_db_connection()
     cur = conn.cursor()
     current_time = datetime.now().strftime('%H:%M:%S')
     cur.execute(
-        "INSERT INTO logs (user_name, date, time, summary) VALUES (%s, %s, %s, %s)",
-        (user_name, today, current_time, summary)
+        "INSERT INTO logs (user_email, user_name, date, time, summary) VALUES (%s, %s, %s, %s, %s)",
+        (user_email, user_name, today, current_time, summary)
     )
     conn.commit()
     cur.close()
     conn.close()
 
-def get_past_entries(user_name):
+def get_past_entries(user_email):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
-        "SELECT id, date, time, summary FROM logs WHERE user_name = %s ORDER BY date DESC, time DESC",
-        (user_name,)
+        "SELECT id, date, time, summary FROM logs WHERE user_email = %s ORDER BY date DESC, time DESC",
+        (user_email,)
     )
     entries = cur.fetchall()
     cur.close()
@@ -106,9 +107,27 @@ init_db()
 # Streamlit app
 st.set_page_config(layout="wide")
 
+# Custom CSS for green button
+st.markdown("""
+    <style>
+    .stButton>button {
+        color: white;
+        background-color: #4CAF50;
+        border-color: #4CAF50;
+    }
+    .stButton>button:hover {
+        color: white;
+        background-color: #45a049;
+        border-color: #45a049;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "user_email" not in st.session_state:
+    st.session_state.user_email = None
 if "user_name" not in st.session_state:
     st.session_state.user_name = None
 if "conversation_ended" not in st.session_state:
@@ -122,9 +141,11 @@ if "summary_generated" not in st.session_state:
 with st.sidebar:
     st.title("Journal Dashboard")
     
-    if st.session_state.user_name is None:
+    if st.session_state.user_email is None or st.session_state.user_name is None:
+        user_email = st.text_input("What's your email?")
         user_name = st.text_input("What's your name?")
-        if user_name:
+        if user_email and user_name:
+            st.session_state.user_email = user_email
             st.session_state.user_name = user_name
             st.success(f"Welcome, {user_name}!")
             st.rerun()
@@ -132,8 +153,8 @@ with st.sidebar:
         st.write(f"Welcome back, {st.session_state.user_name}!")
     
     st.header("Past Entries")
-    if st.session_state.user_name:
-        entries = get_past_entries(st.session_state.user_name)
+    if st.session_state.user_email:
+        entries = get_past_entries(st.session_state.user_email)
         if entries:
             current_date = None
             for entry_id, date, time, summary in entries:
@@ -148,7 +169,7 @@ with st.sidebar:
 # Main area for new entries and displaying selected past entry
 st.title("Daily Reflection Journal")
 
-if st.session_state.user_name:
+if st.session_state.user_email and st.session_state.user_name:
     # Display selected past entry if any
     if 'selected_entry' in st.session_state:
         entry_id, date, time, summary = st.session_state.selected_entry
@@ -229,7 +250,7 @@ if st.session_state.user_name:
                     summary = generate_summary(st.session_state.messages)
                 
                 # Save summary to database
-                save_to_db(st.session_state.user_name, summary)
+                save_to_db(st.session_state.user_email, st.session_state.user_name, summary)
                 
                 st.session_state.summary = summary
                 st.session_state.summary_generated = True
@@ -252,4 +273,4 @@ if st.session_state.user_name:
                     del st.session_state.summary
                 st.rerun()
 else:
-    st.info("Please enter your name in the sidebar to start journaling.")
+    st.info("Please enter your email and name in the sidebar to start journaling.")
