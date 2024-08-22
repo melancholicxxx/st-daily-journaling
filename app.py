@@ -30,6 +30,7 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
+    cur.execute('DROP TABLE IF EXISTS logs')
     cur.execute('''
         CREATE TABLE IF NOT EXISTS logs
         (id SERIAL PRIMARY KEY,
