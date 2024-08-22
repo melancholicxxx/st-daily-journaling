@@ -107,22 +107,6 @@ init_db()
 # Streamlit app
 st.set_page_config(layout="wide")
 
-# Custom CSS for green button
-st.markdown("""
-    <style>
-    .stButton>button {
-        color: white;
-        background-color: #4CAF50;
-        border-color: #4CAF50;
-    }
-    .stButton>button:hover {
-        color: white;
-        background-color: #45a049;
-        border-color: #45a049;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 # Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
