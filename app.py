@@ -6,21 +6,6 @@ import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
 
-st.markdown("""
-    <style>
-    .stButton>button {
-        color: white;
-        background-color: #4CAF50;
-        border-color: #4CAF50;
-    }
-    .stButton>button:hover {
-        color: white;
-        background-color: #45a049;
-        border-color: #45a049;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 # Load environment variables
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 today = datetime.today().strftime('%Y-%m-%d')
