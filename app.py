@@ -222,23 +222,6 @@ if st.session_state.user_name:
             st.session_state.messages.append({"role": "assistant", "content": full_response})
 
         # End Conversation and Log Journal Entry button
-        st.markdown("""
-            <style>
-            .stButton > button {
-                background-color: #4CAF50;  /* Green background */
-                color: white;               /* White text */
-                font-weight: bold;          /* Bold text */
-                border: none;               /* No border */
-                border-radius: 4px;         /* Rounded corners */
-                padding: 10px 24px;         /* Larger padding */
-            }
-            .stButton > button:hover {
-                background-color: #45a049;  /* Darker green on hover */
-                color: white;               /* White text */
-            }
-            </style>
-        """, unsafe_allow_html=True)
-        
         if st.session_state.first_response_given and not st.session_state.conversation_ended and not st.session_state.summary_generated:
             if st.button("End Conversation and Log Journal Entry"):
                 st.session_state.conversation_ended = True
