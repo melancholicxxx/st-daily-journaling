@@ -126,7 +126,23 @@ def voice_input():
             recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
                 result.textContent = 'You said: ' + transcript;
-                window.parent.postMessage({type: 'voice_input', value: transcript}, '*');
+                
+                // Send the transcript to the Streamlit app
+                const data = {
+                    voice_input: transcript
+                };
+                fetch('', {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => response.json())
+                  .then(data => {
+                      if (data.rerun) {
+                          window.parent.location.reload();
+                      }
+                  });
             };
 
             recognition.onerror = (event) => {
@@ -245,14 +261,12 @@ if st.session_state.user_email and st.session_state.user_name:
 
         # Chat input
         if not st.session_state.conversation_ended:
-            prompt = st.chat_input("How are you feeling right now?")
-            
-            # Check for voice input
-            if prompt is None:
-                voice_result = st.session_state.get('voice_input', None)
-                if voice_result:
-                    prompt = voice_result
-                    st.session_state.voice_input = None  # Clear the voice input
+            # Check if there's voice input in the session state
+            if 'voice_input' in st.session_state:
+                prompt = st.session_state.voice_input
+                st.session_state.pop('voice_input')  # Remove the voice input from session state
+            else:
+                prompt = st.chat_input("How are you feeling right now?")
 
             if prompt:
                 # Set first_response_given to True
@@ -327,11 +341,7 @@ if st.session_state.user_email and st.session_state.user_name:
 else:
     st.info("Please enter your email and name in the sidebar to start journaling.")
 
-# Handle voice input from JavaScript
+# Handle form submission
 if st.session_state.user_email and st.session_state.user_name:
-    voice_input_placeholder = st.empty()
-    voice_input = voice_input_placeholder.text_input("Voice Input", key="voice_input", label_visibility="collapsed")
-    if voice_input:
-        st.session_state.voice_input = voice_input
-        voice_input_placeholder.empty()
+    if st.session_state.get('voice_input'):
         st.rerun()
