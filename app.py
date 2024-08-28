@@ -5,7 +5,6 @@ from datetime import datetime
 import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
-import streamlit.components.v1 as components
 
 # Load environment variables
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -102,76 +101,6 @@ def generate_summary(messages):
     )
     return response.choices[0].message.content
 
-def voice_input():
-    components.html(
-        """
-        <script>
-        const recordButton = document.createElement('button');
-        recordButton.textContent = '🎤 Start Recording';
-        recordButton.style.fontSize = '16px';
-        recordButton.style.padding = '10px';
-        recordButton.style.marginBottom = '10px';
-
-        const result = document.createElement('div');
-        result.style.marginBottom = '10px';
-
-        let isRecording = false;
-        let recognition;
-
-        if ('webkitSpeechRecognition' in window) {
-            recognition = new webkitSpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = false;
-
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                result.textContent = 'You said: ' + transcript;
-
-                // Send the transcript to the Streamlit app
-                const data = {
-                    voice_input: transcript
-                };
-                fetch('', {
-                    method: 'POST',
-                    body: JSON.stringify(data),
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }).then(response => response.json())
-                  .then(data => {
-                      if (data.rerun) {
-                          window.parent.location.reload();
-                      }
-                  });
-            };
-
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error', event.error);
-                result.textContent = 'Error: ' + event.error;
-            };
-        } else {
-            result.textContent = 'Web Speech API is not supported in this browser.';
-        }
-
-        recordButton.onclick = () => {
-            if (!isRecording) {
-                recognition.start();
-                recordButton.textContent = '🔴 Stop Recording';
-                isRecording = true;
-            } else {
-                recognition.stop();
-                recordButton.textContent = '🎤 Start Recording';
-                isRecording = false;
-            }
-        };
-
-        document.body.appendChild(recordButton);
-        document.body.appendChild(result);
-        </script>
-        """,
-        height=150,
-    )
-
 # Initialize database
 init_db()
 
@@ -258,19 +187,25 @@ if st.session_state.user_email and st.session_state.user_name:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-        # Add voice input button
-        if st.button("🎤 Use Voice Input"):
+        # Voice input handling
+        voice_input_placeholder = st.empty()
+        
+        if st.button("🎤 Toggle Voice Input"):
             st.session_state.show_voice_input = not st.session_state.show_voice_input
 
         if st.session_state.show_voice_input:
-            voice_input()
+            voice_input = voice_input_placeholder.text_input("Speak now (type your voice input here for simulation)")
+            if voice_input:
+                st.session_state.voice_input = voice_input
+                voice_input_placeholder.empty()
+                st.rerun()
 
         # Chat input
         if not st.session_state.conversation_ended:
             # Check if there's voice input in the session state
             if 'voice_input' in st.session_state:
                 prompt = st.session_state.voice_input
-                st.session_state.pop('voice_input')  # Remove the voice input from session state
+                del st.session_state.voice_input  # Remove the voice input from session state
             else:
                 prompt = st.chat_input("How are you feeling right now?")
 
@@ -347,8 +282,3 @@ if st.session_state.user_email and st.session_state.user_name:
                 st.rerun()
 else:
     st.info("Please enter your email and name in the sidebar to start journaling.")
-
-# Handle form submission
-if st.session_state.user_email and st.session_state.user_name:
-    if st.session_state.get('voice_input'):
-        st.rerun()
