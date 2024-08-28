@@ -302,4 +302,7 @@ elif st.session_state.page == "rag":
 
     if st.button("Return to Journal"):
         st.session_state.page = "main"
+        # Clear selected entry to ensure it goes to new entry page
+        if 'selected_entry' in st.session_state:
+            del st.session_state.selected_entry
         st.rerun()
