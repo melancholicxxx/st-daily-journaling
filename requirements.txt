@@ -6,3 +6,4 @@ google-crc32c
 openai-whisper
 numba
 llvmlite
+SpeechRecognition
