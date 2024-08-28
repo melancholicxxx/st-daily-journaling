@@ -3,3 +3,4 @@ openai
 psycopg2-binary
 streamlit_webrtc
 google-crc32c
+openai-whisper
