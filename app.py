@@ -5,6 +5,7 @@ from datetime import datetime
 import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
+import speech_recognition as sr
 
 # Load environment variables
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -65,7 +66,7 @@ def get_past_entries(user_email):
     entries = cur.fetchall()
     cur.close()
     conn.close()
-
+    
     # Format the date and time
     formatted_entries = []
     for entry in entries:
@@ -75,7 +76,7 @@ def get_past_entries(user_email):
         formatted_date = date_obj.strftime('%d %B %Y')
         formatted_time = time_obj.strftime('%I:%M%p').lower()
         formatted_entries.append((entry_id, formatted_date, formatted_time, summary))
-
+    
     return formatted_entries
 
 def delete_entry(entry_id):
@@ -101,6 +102,23 @@ def generate_summary(messages):
     )
     return response.choices[0].message.content
 
+def get_voice_input():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        st.write("Listening... Speak now.")
+        audio = r.listen(source)
+        st.write("Processing speech...")
+    
+    try:
+        text = r.recognize_google(audio)
+        return text
+    except sr.UnknownValueError:
+        st.error("Sorry, I couldn't understand that. Please try again.")
+        return None
+    except sr.RequestError:
+        st.error("Sorry, there was an error processing your speech. Please try text input instead.")
+        return None
+
 # Initialize database
 init_db()
 
@@ -120,13 +138,11 @@ if "first_response_given" not in st.session_state:
     st.session_state.first_response_given = False
 if "summary_generated" not in st.session_state:
     st.session_state.summary_generated = False
-if "show_voice_input" not in st.session_state:
-    st.session_state.show_voice_input = False
 
 # Sidebar for user info and past entries
 with st.sidebar:
     st.title("Journal Dashboard")
-
+    
     if st.session_state.user_email is None or st.session_state.user_name is None:
         user_email = st.text_input("What's your email?")
         user_name = st.text_input("What's your name?")
@@ -137,7 +153,7 @@ with st.sidebar:
             st.rerun()
     else:
         st.write(f"Welcome back, {st.session_state.user_name}!")
-
+    
     st.header("Past Entries")
     if st.session_state.user_email:
         entries = get_past_entries(st.session_state.user_email)
@@ -181,33 +197,23 @@ if st.session_state.user_email and st.session_state.user_name:
     else:
         # New entry interface
         st.subheader("Share your reflections for today 🧘🏻")
-
+        
         # Display chat messages
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-        # Voice input handling
-        voice_input_placeholder = st.empty()
-        
-        if st.button("🎤 Toggle Voice Input"):
-            st.session_state.show_voice_input = not st.session_state.show_voice_input
-
-        if st.session_state.show_voice_input:
-            voice_input = voice_input_placeholder.text_input("Speak now (type your voice input here for simulation)")
-            if voice_input:
-                st.session_state.voice_input = voice_input
-                voice_input_placeholder.empty()
-                st.rerun()
-
         # Chat input
         if not st.session_state.conversation_ended:
-            # Check if there's voice input in the session state
-            if 'voice_input' in st.session_state:
-                prompt = st.session_state.voice_input
-                del st.session_state.voice_input  # Remove the voice input from session state
-            else:
+            input_method = st.radio("Choose input method:", ("Text", "Voice"))
+            
+            if input_method == "Text":
                 prompt = st.chat_input("How are you feeling right now?")
+            else:
+                if st.button("Start Voice Input"):
+                    prompt = get_voice_input()
+                else:
+                    prompt = None
 
             if prompt:
                 # Set first_response_given to True
@@ -219,7 +225,7 @@ if st.session_state.user_email and st.session_state.user_name:
 
                 # Prepare messages for API call
                 system_message = f"You are a close confidante. Your friend, {st.session_state.user_name}, will tell you how they are feeling and what's on their mind. Listen intently, prompt them to open up and share more about their thoughts and feelings without judgement. Be a friendly, supportive presence, and give a neutral, safe and comfortable tone. Compliment and encourage your friend as much as possible."
-
+                
                 messages = [
                     {"role": "system", "content": system_message},
                 ] + [
@@ -242,7 +248,7 @@ if st.session_state.user_email and st.session_state.user_name:
                     if chunk.choices[0].delta.content is not None:
                         full_response += chunk.choices[0].delta.content
                         message_placeholder.markdown(full_response + "▌")
-
+                
                 # Remove the blinking cursor
                 message_placeholder.markdown(full_response)
 
@@ -255,10 +261,10 @@ if st.session_state.user_email and st.session_state.user_name:
                 st.session_state.conversation_ended = True
                 with st.spinner("Generating your journal entry summary..."):
                     summary = generate_summary(st.session_state.messages)
-
+                
                 # Save summary to database
                 save_to_db(st.session_state.user_email, st.session_state.user_name, summary)
-
+                
                 st.session_state.summary = summary
                 st.session_state.summary_generated = True
                 st.rerun()  # Force a rerun to update the UI
@@ -276,7 +282,6 @@ if st.session_state.user_email and st.session_state.user_name:
                 st.session_state.messages = []
                 st.session_state.first_response_given = False
                 st.session_state.summary_generated = False
-                st.session_state.show_voice_input = False
                 if 'summary' in st.session_state:
                     del st.session_state.summary
                 st.rerun()
