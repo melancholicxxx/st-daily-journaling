@@ -5,6 +5,7 @@ from datetime import datetime
 import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
+import streamlit.components.v1 as components
 
 # Load environment variables
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -65,7 +66,7 @@ def get_past_entries(user_email):
     entries = cur.fetchall()
     cur.close()
     conn.close()
-    
+
     # Format the date and time
     formatted_entries = []
     for entry in entries:
@@ -75,7 +76,7 @@ def get_past_entries(user_email):
         formatted_date = date_obj.strftime('%d %B %Y')
         formatted_time = time_obj.strftime('%I:%M%p').lower()
         formatted_entries.append((entry_id, formatted_date, formatted_time, summary))
-    
+
     return formatted_entries
 
 def delete_entry(entry_id):
@@ -101,6 +102,60 @@ def generate_summary(messages):
     )
     return response.choices[0].message.content
 
+def voice_input():
+    components.html(
+        """
+        <script>
+        const recordButton = document.createElement('button');
+        recordButton.textContent = '🎤 Start Recording';
+        recordButton.style.fontSize = '16px';
+        recordButton.style.padding = '10px';
+        recordButton.style.marginBottom = '10px';
+
+        const result = document.createElement('div');
+        result.style.marginBottom = '10px';
+
+        let isRecording = false;
+        let recognition;
+
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                result.textContent = 'You said: ' + transcript;
+                window.parent.postMessage({type: 'voice_input', value: transcript}, '*');
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error', event.error);
+                result.textContent = 'Error: ' + event.error;
+            };
+        } else {
+            result.textContent = 'Web Speech API is not supported in this browser.';
+        }
+
+        recordButton.onclick = () => {
+            if (!isRecording) {
+                recognition.start();
+                recordButton.textContent = '🔴 Stop Recording';
+                isRecording = true;
+            } else {
+                recognition.stop();
+                recordButton.textContent = '🎤 Start Recording';
+                isRecording = false;
+            }
+        };
+
+        document.body.appendChild(recordButton);
+        document.body.appendChild(result);
+        </script>
+        """,
+        height=150,
+    )
+
 # Initialize database
 init_db()
 
@@ -124,7 +179,7 @@ if "summary_generated" not in st.session_state:
 # Sidebar for user info and past entries
 with st.sidebar:
     st.title("Journal Dashboard")
-    
+
     if st.session_state.user_email is None or st.session_state.user_name is None:
         user_email = st.text_input("What's your email?")
         user_name = st.text_input("What's your name?")
@@ -135,7 +190,7 @@ with st.sidebar:
             st.rerun()
     else:
         st.write(f"Welcome back, {st.session_state.user_name}!")
-    
+
     st.header("Past Entries")
     if st.session_state.user_email:
         entries = get_past_entries(st.session_state.user_email)
@@ -179,52 +234,65 @@ if st.session_state.user_email and st.session_state.user_name:
     else:
         # New entry interface
         st.subheader("Share your reflections for today 🧘🏻")
-        
+
         # Display chat messages
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
+        # Add voice input button
+        voice_input()
+
         # Chat input
-        if not st.session_state.conversation_ended and (prompt := st.chat_input("How are you feeling right now?")):
-            # Set first_response_given to True
-            st.session_state.first_response_given = True
-            # Add user message to chat history
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user"):
-                st.markdown(prompt)
-
-            # Prepare messages for API call
-            system_message = f"You are a close confidante. Your friend, {st.session_state.user_name}, will tell you how they are feeling and what's on their mind. Listen intently, prompt them to open up and share more about their thoughts and feelings without judgement. Be a friendly, supportive presence, and give a neutral, safe and comfortable tone. Compliment and encourage your friend as much as possible."
+        if not st.session_state.conversation_ended:
+            prompt = st.chat_input("How are you feeling right now?")
             
-            messages = [
-                {"role": "system", "content": system_message},
-            ] + [
-                {"role": msg["role"], "content": msg["content"]}
-                for msg in st.session_state.messages
-            ]
+            # Check for voice input
+            if prompt is None:
+                voice_result = st.session_state.get('voice_input', None)
+                if voice_result:
+                    prompt = voice_result
+                    st.session_state.voice_input = None  # Clear the voice input
 
-            # Create a placeholder for the assistant's response
-            with st.chat_message("assistant"):
-                message_placeholder = st.empty()
-                full_response = ""
+            if prompt:
+                # Set first_response_given to True
+                st.session_state.first_response_given = True
+                # Add user message to chat history
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                with st.chat_message("user"):
+                    st.markdown(prompt)
 
-            # Stream the response
-            for chunk in client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                temperature=0.1,
-                stream=True,
-            ):
-                if chunk.choices[0].delta.content is not None:
-                    full_response += chunk.choices[0].delta.content
-                    message_placeholder.markdown(full_response + "▌")
-            
-            # Remove the blinking cursor
-            message_placeholder.markdown(full_response)
+                # Prepare messages for API call
+                system_message = f"You are a close confidante. Your friend, {st.session_state.user_name}, will tell you how they are feeling and what's on their mind. Listen intently, prompt them to open up and share more about their thoughts and feelings without judgement. Be a friendly, supportive presence, and give a neutral, safe and comfortable tone. Compliment and encourage your friend as much as possible."
 
-            # Add assistant message to chat history
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
+                messages = [
+                    {"role": "system", "content": system_message},
+                ] + [
+                    {"role": msg["role"], "content": msg["content"]}
+                    for msg in st.session_state.messages
+                ]
+
+                # Create a placeholder for the assistant's response
+                with st.chat_message("assistant"):
+                    message_placeholder = st.empty()
+                    full_response = ""
+
+                # Stream the response
+                for chunk in client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=messages,
+                    temperature=0.1,
+                    stream=True,
+                ):
+                    if chunk.choices[0].delta.content is not None:
+                        full_response += chunk.choices[0].delta.content
+                        message_placeholder.markdown(full_response + "▌")
+
+                # Remove the blinking cursor
+                message_placeholder.markdown(full_response)
+
+                # Add assistant message to chat history
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
 
         # End Conversation and Log Journal Entry button
         if st.session_state.first_response_given and not st.session_state.conversation_ended and not st.session_state.summary_generated:
@@ -232,10 +300,10 @@ if st.session_state.user_email and st.session_state.user_name:
                 st.session_state.conversation_ended = True
                 with st.spinner("Generating your journal entry summary..."):
                     summary = generate_summary(st.session_state.messages)
-                
+
                 # Save summary to database
                 save_to_db(st.session_state.user_email, st.session_state.user_name, summary)
-                
+
                 st.session_state.summary = summary
                 st.session_state.summary_generated = True
                 st.rerun()  # Force a rerun to update the UI
@@ -258,3 +326,12 @@ if st.session_state.user_email and st.session_state.user_name:
                 st.rerun()
 else:
     st.info("Please enter your email and name in the sidebar to start journaling.")
+
+# Handle voice input from JavaScript
+if st.session_state.user_email and st.session_state.user_name:
+    voice_input_placeholder = st.empty()
+    voice_input = voice_input_placeholder.text_input("Voice Input", key="voice_input", label_visibility="collapsed")
+    if voice_input:
+        st.session_state.voice_input = voice_input
+        voice_input_placeholder.empty()
+        st.rerun()
