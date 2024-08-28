@@ -282,7 +282,7 @@ elif st.session_state.page == "rag":
     context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary in entries])
 
     # User input
-    user_query = st.text_input("What would you like to know about your journal entries?")
+    user_query = st.text_input("What would you like to know about your previous journal entries?")
 
     if user_query:
         with st.spinner("Analyzing your journal entries..."):
