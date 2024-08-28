@@ -138,7 +138,12 @@ with st.sidebar:
     else:
         st.write(f"Welcome back, {st.session_state.user_name}!")
         
-        # Only show past entries and RAG button after user has logged in
+        # Add button to go to RAG page
+        if st.button("Ask about your journal entries", key="rag_button", help="Ask questions about your past journal entries", type="primary"):
+            st.session_state.page = "rag"
+            st.rerun()
+        
+        # Only show past entries after user has logged in
         st.header("Past Entries")
         entries = get_past_entries(st.session_state.user_email)
         if entries:
@@ -151,12 +156,6 @@ with st.sidebar:
                     st.session_state.selected_entry = (entry_id, date, time, summary)
         else:
             st.info("No past entries found.")
-        
-        # Add button to go to RAG page at the bottom of the sidebar
-        st.markdown("<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
-        if st.button("Ask about your journal entries", key="rag_button", help="Ask questions about your past journal entries", type="primary"):
-            st.session_state.page = "rag"
-            st.rerun()
 
 # Main area for new entries and displaying selected past entry
 if st.session_state.page == "main":
