@@ -5,7 +5,6 @@ from datetime import datetime
 import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
-import speech_recognition as sr
 
 # Load environment variables
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -102,23 +101,6 @@ def generate_summary(messages):
     )
     return response.choices[0].message.content
 
-def get_voice_input():
-    r = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.write("Listening... Speak now.")
-        audio = r.listen(source)
-        st.write("Processing speech...")
-    
-    try:
-        text = r.recognize_google(audio)
-        return text
-    except sr.UnknownValueError:
-        st.error("Sorry, I couldn't understand that. Please try again.")
-        return None
-    except sr.RequestError:
-        st.error("Sorry, there was an error processing your speech. Please try text input instead.")
-        return None
-
 # Initialize database
 init_db()
 
@@ -204,56 +186,45 @@ if st.session_state.user_email and st.session_state.user_name:
                 st.markdown(message["content"])
 
         # Chat input
-        if not st.session_state.conversation_ended:
-            input_method = st.radio("Choose input method:", ("Text", "Voice"))
+        if not st.session_state.conversation_ended and (prompt := st.chat_input("How are you feeling right now?")):
+            # Set first_response_given to True
+            st.session_state.first_response_given = True
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            # Prepare messages for API call
+            system_message = f"You are a close confidante. Your friend, {st.session_state.user_name}, will tell you how they are feeling and what's on their mind. Listen intently, prompt them to open up and share more about their thoughts and feelings without judgement. Be a friendly, supportive presence, and give a neutral, safe and comfortable tone. Compliment and encourage your friend as much as possible."
             
-            if input_method == "Text":
-                prompt = st.chat_input("How are you feeling right now?")
-            else:
-                if st.button("Start Voice Input"):
-                    prompt = get_voice_input()
-                else:
-                    prompt = None
+            messages = [
+                {"role": "system", "content": system_message},
+            ] + [
+                {"role": msg["role"], "content": msg["content"]}
+                for msg in st.session_state.messages
+            ]
 
-            if prompt:
-                # Set first_response_given to True
-                st.session_state.first_response_given = True
-                # Add user message to chat history
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                with st.chat_message("user"):
-                    st.markdown(prompt)
+            # Create a placeholder for the assistant's response
+            with st.chat_message("assistant"):
+                message_placeholder = st.empty()
+                full_response = ""
 
-                # Prepare messages for API call
-                system_message = f"You are a close confidante. Your friend, {st.session_state.user_name}, will tell you how they are feeling and what's on their mind. Listen intently, prompt them to open up and share more about their thoughts and feelings without judgement. Be a friendly, supportive presence, and give a neutral, safe and comfortable tone. Compliment and encourage your friend as much as possible."
-                
-                messages = [
-                    {"role": "system", "content": system_message},
-                ] + [
-                    {"role": msg["role"], "content": msg["content"]}
-                    for msg in st.session_state.messages
-                ]
+            # Stream the response
+            for chunk in client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.1,
+                stream=True,
+            ):
+                if chunk.choices[0].delta.content is not None:
+                    full_response += chunk.choices[0].delta.content
+                    message_placeholder.markdown(full_response + "▌")
+            
+            # Remove the blinking cursor
+            message_placeholder.markdown(full_response)
 
-                # Create a placeholder for the assistant's response
-                with st.chat_message("assistant"):
-                    message_placeholder = st.empty()
-                    full_response = ""
-
-                # Stream the response
-                for chunk in client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=messages,
-                    temperature=0.1,
-                    stream=True,
-                ):
-                    if chunk.choices[0].delta.content is not None:
-                        full_response += chunk.choices[0].delta.content
-                        message_placeholder.markdown(full_response + "▌")
-                
-                # Remove the blinking cursor
-                message_placeholder.markdown(full_response)
-
-                # Add assistant message to chat history
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
+            # Add assistant message to chat history
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
 
         # End Conversation and Log Journal Entry button
         if st.session_state.first_response_given and not st.session_state.conversation_ended and not st.session_state.summary_generated:
