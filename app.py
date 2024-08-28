@@ -5,6 +5,7 @@ from datetime import datetime
 import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
+from streamlit_extras.switch_page_button import switch_page
 
 # Load environment variables
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -149,6 +150,9 @@ with st.sidebar:
                     st.session_state.selected_entry = (entry_id, date, time, summary)
         else:
             st.info("No past entries found.")
+        
+        if st.button("Ask about your journal entries"):
+            switch_page("rag")
 
 # Main area for new entries and displaying selected past entry
 st.title("Daily Reflection Journal")
