@@ -126,7 +126,7 @@ def voice_input():
             recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
                 result.textContent = 'You said: ' + transcript;
-                
+
                 // Send the transcript to the Streamlit app
                 const data = {
                     voice_input: transcript
@@ -191,6 +191,8 @@ if "first_response_given" not in st.session_state:
     st.session_state.first_response_given = False
 if "summary_generated" not in st.session_state:
     st.session_state.summary_generated = False
+if "show_voice_input" not in st.session_state:
+    st.session_state.show_voice_input = False
 
 # Sidebar for user info and past entries
 with st.sidebar:
@@ -257,7 +259,11 @@ if st.session_state.user_email and st.session_state.user_name:
                 st.markdown(message["content"])
 
         # Add voice input button
-        voice_input()
+        if st.button("🎤 Use Voice Input"):
+            st.session_state.show_voice_input = not st.session_state.show_voice_input
+
+        if st.session_state.show_voice_input:
+            voice_input()
 
         # Chat input
         if not st.session_state.conversation_ended:
@@ -335,6 +341,7 @@ if st.session_state.user_email and st.session_state.user_name:
                 st.session_state.messages = []
                 st.session_state.first_response_given = False
                 st.session_state.summary_generated = False
+                st.session_state.show_voice_input = False
                 if 'summary' in st.session_state:
                     del st.session_state.summary
                 st.rerun()
