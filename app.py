@@ -152,8 +152,9 @@ with st.sidebar:
         else:
             st.info("No past entries found.")
         
-        # Add button to go to RAG page
-        if st.button("Ask about your journal entries"):
+        # Add button to go to RAG page at the bottom of the sidebar
+        st.markdown("<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>", unsafe_allow_html=True)
+        if st.button("Ask about your journal entries", key="rag_button", help="Ask questions about your past journal entries", type="primary"):
             st.session_state.page = "rag"
             st.rerun()
 
