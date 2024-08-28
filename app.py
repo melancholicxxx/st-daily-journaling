@@ -228,7 +228,7 @@ if st.session_state.user_email and st.session_state.user_name:
 
         # End Conversation and Log Journal Entry button
         if st.session_state.first_response_given and not st.session_state.conversation_ended and not st.session_state.summary_generated:
-            if st.button("End Conversation and Log Journal Entry"):
+            if st.button("Finish Conversation and Log Entry"):
                 st.session_state.conversation_ended = True
                 with st.spinner("Generating your journal entry summary..."):
                     summary = generate_summary(st.session_state.messages)
