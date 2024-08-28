@@ -5,10 +5,6 @@ from datetime import datetime
 import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
-from streamlit_webrtc import webrtc_streamer, WebRtcMode
-import whisper
-import numpy as np
-import tempfile
 
 # Load environment variables
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -105,19 +101,6 @@ def generate_summary(messages):
     )
     return response.choices[0].message.content
 
-# Initialize Whisper model
-whisper_model = whisper.load_model("base")
-
-# Function to transcribe audio
-def transcribe_audio(audio):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-        temp_audio.write(audio)
-        temp_audio.flush()
-
-        result = whisper_model.transcribe(temp_audio.name)
-        os.unlink(temp_audio.name)
-        return result["text"]
-
 # Initialize database
 init_db()
 
@@ -203,71 +186,45 @@ if st.session_state.user_email and st.session_state.user_name:
                 st.markdown(message["content"])
 
         # Chat input
-        if not st.session_state.conversation_ended:
-            col1, col2 = st.columns(2)
+        if not st.session_state.conversation_ended and (prompt := st.chat_input("How are you feeling right now?")):
+            # Set first_response_given to True
+            st.session_state.first_response_given = True
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            # Prepare messages for API call
+            system_message = f"You are a close confidante. Your friend, {st.session_state.user_name}, will tell you how they are feeling and what's on their mind. Listen intently, prompt them to open up and share more about their thoughts and feelings without judgement. Be a friendly, supportive presence, and give a neutral, safe and comfortable tone. Compliment and encourage your friend as much as possible."
             
-            with col1:
-                prompt = st.text_input("How are you feeling right now?", key="text_input")
+            messages = [
+                {"role": "system", "content": system_message},
+            ] + [
+                {"role": msg["role"], "content": msg["content"]}
+                for msg in st.session_state.messages
+            ]
+
+            # Create a placeholder for the assistant's response
+            with st.chat_message("assistant"):
+                message_placeholder = st.empty()
+                full_response = ""
+
+            # Stream the response
+            for chunk in client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.1,
+                stream=True,
+            ):
+                if chunk.choices[0].delta.content is not None:
+                    full_response += chunk.choices[0].delta.content
+                    message_placeholder.markdown(full_response + "▌")
             
-            with col2:
-                st.write("Or use voice input:")
-                webrtc_ctx = webrtc_streamer(
-                    key="voice-input",
-                    mode=WebRtcMode.AUDIO_RECORDER,
-                    audio_receiver_size=1024,
-                    rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-                )
+            # Remove the blinking cursor
+            message_placeholder.markdown(full_response)
 
-                if webrtc_ctx.audio_receiver:
-                    if st.button("Transcribe"):
-                        try:
-                            audio_frames = webrtc_ctx.audio_receiver.get_frames(timeout=1)
-                            audio_data = b"".join([frame.to_ndarray().tobytes() for frame in audio_frames])
-                            text = transcribe_audio(audio_data)
-                            st.session_state.text_input = text
-                            st.experimental_rerun()
-                        except:
-                            st.error("No audio detected. Please try again.")
-
-            if prompt:
-                # Set first_response_given to True
-                st.session_state.first_response_given = True
-                # Add user message to chat history
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                with st.chat_message("user"):
-                    st.markdown(prompt)
-
-                # Prepare messages for API call
-                system_message = f"You are a close confidante. Your friend, {st.session_state.user_name}, will tell you how they are feeling and what's on their mind. Listen intently, prompt them to open up and share more about their thoughts and feelings without judgement. Be a friendly, supportive presence, and give a neutral, safe and comfortable tone. Compliment and encourage your friend as much as possible."
-                
-                messages = [
-                    {"role": "system", "content": system_message},
-                ] + [
-                    {"role": msg["role"], "content": msg["content"]}
-                    for msg in st.session_state.messages
-                ]
-
-                # Create a placeholder for the assistant's response
-                with st.chat_message("assistant"):
-                    message_placeholder = st.empty()
-                    full_response = ""
-
-                # Stream the response
-                for chunk in client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=messages,
-                    temperature=0.1,
-                    stream=True,
-                ):
-                    if chunk.choices[0].delta.content is not None:
-                        full_response += chunk.choices[0].delta.content
-                        message_placeholder.markdown(full_response + "▌")
-                
-                # Remove the blinking cursor
-                message_placeholder.markdown(full_response)
-
-                # Add assistant message to chat history
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
+            # Add assistant message to chat history
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
 
         # End Conversation and Log Journal Entry button
         if st.session_state.first_response_given and not st.session_state.conversation_ended and not st.session_state.summary_generated:
@@ -281,4 +238,23 @@ if st.session_state.user_email and st.session_state.user_name:
                 
                 st.session_state.summary = summary
                 st.session_state.summary_generated = True
-                st.rerun()  # Force a rerun to update
+                st.rerun()  # Force a rerun to update the UI
+
+        # Display summary if it has been generated
+        if st.session_state.summary_generated:
+            st.success("Great job reflecting on your day! Here's your journal entry summary:")
+            st.markdown(st.session_state.summary)
+            st.info("You can view past journal entries on the left")
+
+        # Display a message if the conversation has ended
+        if st.session_state.conversation_ended:
+            if st.button("Log a New Entry"):
+                st.session_state.conversation_ended = False
+                st.session_state.messages = []
+                st.session_state.first_response_given = False
+                st.session_state.summary_generated = False
+                if 'summary' in st.session_state:
+                    del st.session_state.summary
+                st.rerun()
+else:
+    st.info("Please enter your email and name in the sidebar to start journaling.")
