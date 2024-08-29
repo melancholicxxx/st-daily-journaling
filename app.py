@@ -310,6 +310,15 @@ elif st.session_state.page == "rag":
     with col2:
         if st.button("Return to Journal"):
             st.session_state.page = "main"
+            # Reset session state for new journal entry
+            st.session_state.conversation_ended = False
+            st.session_state.messages = []
+            st.session_state.first_response_given = False
+            st.session_state.summary_generated = False
+            if 'summary' in st.session_state:
+                del st.session_state.summary
+            if 'selected_entry' in st.session_state:
+                del st.session_state.selected_entry
             if 'selected_question' in st.session_state:
                 del st.session_state.selected_question
             st.rerun()
