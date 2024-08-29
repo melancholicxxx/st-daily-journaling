@@ -301,12 +301,12 @@ elif st.session_state.page == "rag":
         if st.button(question, key=f"btn_{question}"):
             st.session_state.selected_question = question
             st.rerun()  # Add this line to update the input box immediately
-            
+
     # Create columns for the "Analyze" and "Return to Journal" buttons
     col1, col2 = st.columns(2)
 
     with col1:
-        analyze_button = st.button("Analyze")
+        analyze_button = st.button("Analyze", type="primary")
 
     with col2:
         if st.button("Return to Journal"):
