@@ -283,6 +283,9 @@ elif st.session_state.page == "rag":
     # Combine all entries into a single context string
     context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary in entries])
 
+    # Text input for custom or selected question
+    user_query = st.text_input("Enter your question:", value=st.session_state.get('selected_question', ''))
+
     # Predefined questions
     predefined_questions = [
         "What brings me the most joy?",
@@ -297,10 +300,8 @@ elif st.session_state.page == "rag":
     for question in predefined_questions:
         if st.button(question, key=f"btn_{question}"):
             st.session_state.selected_question = question
-
-    # Text input for custom or selected question
-    user_query = st.text_input("Enter your question:", value=st.session_state.get('selected_question', ''))
-
+            st.rerun()  # Add this line to update the input box immediately
+            
     # Create columns for the "Analyze" and "Return to Journal" buttons
     col1, col2 = st.columns(2)
 
