@@ -281,8 +281,23 @@ elif st.session_state.page == "rag":
     # Combine all entries into a single context string
     context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary in entries])
 
+    # Predefined questions
+    predefined_questions = [
+        "What brings me the most joy?",
+        "What drains my energy most?",
+        "How do I demonstrate love and care?",
+        "What are some recurring themes from my entries?",
+        "What book recommendations do you have based on my entries?"
+    ]
+
+    # Create buttons for predefined questions
+    selected_question = st.radio("Select a question or type your own:", ["Custom"] + predefined_questions)
+
     # User input
-    user_query = st.text_input("What would you like to know about your previous journal entries?")
+    if selected_question == "Custom":
+        user_query = st.text_input("What would you like to know about your past journal entries?")
+    else:
+        user_query = selected_question
 
     if user_query:
         with st.spinner("Analyzing your journal entries..."):
@@ -302,7 +317,4 @@ elif st.session_state.page == "rag":
 
     if st.button("Return to Journal"):
         st.session_state.page = "main"
-        # Clear selected entry to ensure it goes to new entry page
-        if 'selected_entry' in st.session_state:
-            del st.session_state.selected_entry
         st.rerun()
