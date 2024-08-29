@@ -295,9 +295,24 @@ elif st.session_state.page == "rag":
     for question in predefined_questions:
         if st.button(question):
             st.session_state.selected_question = question
+            st.session_state.user_typed = False  # Flag to indicate selection
     
     # Text input for custom or selected question
-    user_query = st.text_input("Enter your question:", value=st.session_state.get('selected_question', ''))
+    if 'user_typed' not in st.session_state:
+        st.session_state.user_typed = False
+
+    user_query = st.text_input("Enter your question:", 
+                               value=st.session_state.get('selected_question', ''),
+                               key="user_query")
+
+    # Check if user has typed something
+    if user_query != st.session_state.get('selected_question', ''):
+        st.session_state.user_typed = True
+
+    # Clear the input if it's a selected question and user hasn't typed
+    if not st.session_state.user_typed and st.session_state.get('selected_question'):
+        st.session_state.user_query = ''
+        user_query = ''
 
     if user_query:
         with st.spinner("Analyzing your journal entries..."):
