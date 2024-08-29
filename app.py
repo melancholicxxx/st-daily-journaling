@@ -295,7 +295,7 @@ elif st.session_state.page == "rag":
     for question in predefined_questions:
         if st.button(question):
             st.session_state.selected_question = question
-    
+
     # Text input for custom or selected question
     user_query = st.text_input("Enter your question:", value=st.session_state.get('selected_question', ''))
 
