@@ -139,7 +139,7 @@ with st.sidebar:
         st.write(f"Welcome back, {st.session_state.user_name}!")
         
         # Add button to go to RAG page
-        if st.button("Ask about your journal entries", key="rag_button", help="Ask questions about your past journal entries", type="primary"):
+        if st.button("Ask anything about yourself", key="rag_button", help="Ask questions about your past journal entries", type="primary"):
             st.session_state.page = "rag"
             st.rerun()
         
@@ -270,7 +270,7 @@ if st.session_state.page == "main":
         st.info("Please enter your email and name in the sidebar to start journaling.")
 
 elif st.session_state.page == "rag":
-    st.title("Ask about your journal entries")
+    st.title("Ask anything about yourself")
 
     if st.session_state.user_email is None:
         st.warning("Please log in first.")
@@ -284,7 +284,7 @@ elif st.session_state.page == "rag":
     context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary in entries])
 
     # Text input for custom or selected question
-    user_query = st.text_input("Enter your question:", value=st.session_state.get('selected_question', ''))
+    user_query = st.text_input("Select your question from belowor type your own:", value=st.session_state.get('selected_question', ''))
 
     # Predefined questions
     predefined_questions = [
@@ -296,7 +296,6 @@ elif st.session_state.page == "rag":
     ]
 
     # Create buttons for predefined questions
-    st.write("Select a question or type your own:")
     for question in predefined_questions:
         if st.button(question, key=f"btn_{question}"):
             st.session_state.selected_question = question
