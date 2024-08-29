@@ -275,10 +275,6 @@ elif st.session_state.page == "rag":
         st.session_state.page = "main"
         st.rerun()
 
-    # Clear the selected question when entering the RAG page
-    if 'selected_question' in st.session_state:
-        del st.session_state.selected_question
-
     # Fetch all user's entries
     entries = get_past_entries(st.session_state.user_email)
 
@@ -297,9 +293,8 @@ elif st.session_state.page == "rag":
     # Create buttons for predefined questions
     st.write("Select a question or type your own:")
     for question in predefined_questions:
-        if st.button(question):
+        if st.button(question, key=f"btn_{question}"):
             st.session_state.selected_question = question
-            st.rerun()
 
     # Text input for custom or selected question
     user_query = st.text_input("Enter your question:", value=st.session_state.get('selected_question', ''))
@@ -325,3 +320,8 @@ elif st.session_state.page == "rag":
         if 'selected_question' in st.session_state:
             del st.session_state.selected_question
         st.rerun()
+
+    # Clear the selected question when leaving the RAG page
+    if st.session_state.page != "rag":
+        if 'selected_question' in st.session_state:
+            del st.session_state.selected_question
