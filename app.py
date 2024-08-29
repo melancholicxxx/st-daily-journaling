@@ -300,7 +300,7 @@ elif st.session_state.page == "rag":
     for question in predefined_questions:
         if st.button(question, key=f"btn_{question}"):
             st.session_state.selected_question = question
-            user_query = question  # Update the text input with the selected question
+            st.experimental_rerun()  # Force a rerun to update the text input
 
     # Create columns for the "Analyze" and "Return to Journal" buttons
     col1, col2 = st.columns(2)
