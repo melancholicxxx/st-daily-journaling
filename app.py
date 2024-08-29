@@ -291,13 +291,13 @@ elif st.session_state.page == "rag":
     ]
 
     # Create buttons for predefined questions
-    selected_question = st.radio("Select a question or type your own:", ["Custom"] + predefined_questions)
-
-    # User input
-    if selected_question == "Custom":
-        user_query = st.text_input("What would you like to know about your past journal entries?")
-    else:
-        user_query = selected_question
+    st.write("Select a question or type your own:")
+    for question in predefined_questions:
+        if st.button(question):
+            st.session_state.selected_question = question
+    
+    # Text input for custom or selected question
+    user_query = st.text_input("Enter your question:", value=st.session_state.get('selected_question', ''))
 
     if user_query:
         with st.spinner("Analyzing your journal entries..."):
