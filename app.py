@@ -292,20 +292,14 @@ elif st.session_state.page == "rag":
         "What book recommendations do you have based on my entries?"
     ]
 
-    # Check if a predefined question was selected
-    if 'selected_question' not in st.session_state:
-        st.session_state.selected_question = ''
-
-    # Text input for custom or selected question
-    user_query = st.text_input("Enter your question:", value=st.session_state.selected_question)
-
     # Create buttons for predefined questions
-    st.write("Or select a predefined question:")
+    st.write("Select a question or type your own:")
     for question in predefined_questions:
         if st.button(question, key=f"btn_{question}"):
             st.session_state.selected_question = question
-            st.experimental_rerun()  # Force a rerun to update the text input
 
+    # Text input for custom or selected question
+    user_query = st.text_input("Enter your question:", value=st.session_state.get('selected_question', ''))
 
     # Create columns for the "Analyze" and "Return to Journal" buttons
     col1, col2 = st.columns(2)
