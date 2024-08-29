@@ -154,6 +154,7 @@ with st.sidebar:
                     current_date = date
                 if st.button(f"Entry at {time}", key=f"view_{entry_id}"):
                     st.session_state.selected_entry = (entry_id, date, time, summary)
+                    st.rerun()  # Add this line to force a rerun
         else:
             st.info("No past entries found.")
 
@@ -281,54 +282,4 @@ elif st.session_state.page == "rag":
     # Combine all entries into a single context string
     context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary in entries])
 
-    # Predefined questions
-    predefined_questions = [
-        "What brings me the most joy?",
-        "What drains my energy most?",
-        "How do I demonstrate love and care?",
-        "What are some recurring themes from my entries?",
-        "What book recommendations do you have based on my entries?"
-    ]
-
-    # Create buttons for predefined questions
-    st.write("Select a question or type your own:")
-    for question in predefined_questions:
-        if st.button(question, key=f"btn_{question}"):
-            st.session_state.selected_question = question
-
-    # Text input for custom or selected question
-    user_query = st.text_input("Enter your question:", value=st.session_state.get('selected_question', ''))
-
-    # Create columns for the "Analyze" and "Return to Journal" buttons
-    col1, col2 = st.columns(2)
-
-    with col1:
-        analyze_button = st.button("Analyze")
-
-    with col2:
-        if st.button("Return to Journal"):
-            st.session_state.page = "main"
-            if 'selected_question' in st.session_state:
-                del st.session_state.selected_question
-            st.rerun()
-
-    if user_query and analyze_button:
-        with st.spinner("Analyzing your journal entries..."):
-            messages = [
-                {"role": "system", "content": "You are an AI assistant analyzing journal entries. Use the provided context to answer the user's question."},
-                {"role": "user", "content": f"Context: {context}\n\nQuestion: {user_query}"}
-            ]
-
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                temperature=0.1,
-            )
-
-            st.write("Answer:")
-            st.write(response.choices[0].message.content)
-
-    # Clear the selected question when leaving the RAG page
-    if st.session_state.page != "rag":
-        if 'selected_question' in st.session_state:
-            del st.session_state.selected_question
+    #
