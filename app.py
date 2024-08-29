@@ -299,7 +299,20 @@ elif st.session_state.page == "rag":
     # Text input for custom or selected question
     user_query = st.text_input("Enter your question:", value=st.session_state.get('selected_question', ''))
 
-    if user_query:
+    # Create columns for the "Analyze" and "Return to Journal" buttons
+    col1, col2 = st.columns(2)
+
+    with col1:
+        analyze_button = st.button("Analyze")
+
+    with col2:
+        if st.button("Return to Journal"):
+            st.session_state.page = "main"
+            if 'selected_question' in st.session_state:
+                del st.session_state.selected_question
+            st.rerun()
+
+    if user_query and analyze_button:
         with st.spinner("Analyzing your journal entries..."):
             messages = [
                 {"role": "system", "content": "You are an AI assistant analyzing journal entries. Use the provided context to answer the user's question."},
@@ -314,12 +327,6 @@ elif st.session_state.page == "rag":
 
             st.write("Answer:")
             st.write(response.choices[0].message.content)
-
-    if st.button("Return to Journal"):
-        st.session_state.page = "main"
-        if 'selected_question' in st.session_state:
-            del st.session_state.selected_question
-        st.rerun()
 
     # Clear the selected question when leaving the RAG page
     if st.session_state.page != "rag":
