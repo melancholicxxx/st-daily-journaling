@@ -267,68 +267,45 @@ if st.session_state.page == "main":
     else:
         st.info("Please enter your email and name in the sidebar to start journaling.")
 
-elif st.session_state.page == "rag":
-    st.title("Ask about your journal entries")
-
-    if st.session_state.user_email is None:
-        st.warning("Please log in first.")
-        st.session_state.page = "main"
-        st.rerun()
-
-    # Fetch all user's entries
-    entries = get_past_entries(st.session_state.user_email)
-
-    # Combine all entries into a single context string
-    context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary in entries])
-
-    # Predefined questions
-    predefined_questions = [
-        "What brings me the most joy?",
-        "What drains my energy most?",
-        "How do I demonstrate love and care?",
-        "What are some recurring themes from my entries?",
-        "What book recommendations do you have based on my entries?"
-    ]
-
-    # Create buttons for predefined questions
-    st.write("Select a question or type your own:")
-    for question in predefined_questions:
-        if st.button(question, key=f"btn_{question}"):
-            st.session_state.selected_question = question
-
-    # Text input for custom or selected question
-    user_query = st.text_input("Enter your question:", value=st.session_state.get('selected_question', ''))
-
-    # Create columns for the "Analyze" and "Return to Journal" buttons
-    col1, col2 = st.columns(2)
-
-    with col1:
-        analyze_button = st.button("Analyze")
-
-    with col2:
-        if st.button("Return to Journal"):
-            st.session_state.page = "main"
-            if 'selected_question' in st.session_state:
-                del st.session_state.selected_question
+# Sidebar for user info and past entries
+with st.sidebar:
+    st.title("Journal Dashboard")
+    
+    if st.session_state.user_email is None or st.session_state.user_name is None:
+        user_email = st.text_input("What's your email?")
+        user_name = st.text_input("What's your name?")
+        if user_email and user_name:
+            st.session_state.user_email = user_email
+            st.session_state.user_name = user_name
+            st.success(f"Welcome, {user_name}!")
             st.rerun()
-
-    if user_query and analyze_button:
-        with st.spinner("Analyzing your journal entries..."):
-            messages = [
-                {"role": "system", "content": "You are an AI assistant analyzing journal entries. Use the provided context to answer the user's question."},
-                {"role": "user", "content": f"Context: {context}\n\nQuestion: {user_query}"}
-            ]
-
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                temperature=0.1,
-            )
-
-            st.write("Answer:")
-            st.write(response.choices[0].message.content)
-
-    # Clear the selected question when leaving the RAG page
-    if st.session_state.page != "rag":
-        if 'selected_question' in st.session_state:
-            del st.session_state.selected_question
+    else:
+        st.write(f"Welcome back, {st.session_state.user_name}!")
+        
+        # Add button to toggle between main and RAG pages
+        if st.session_state.page == "main":
+            if st.button("Ask about your journal entries", key="rag_button", help="Ask questions about your past journal entries", type="primary"):
+                st.session_state.page = "rag"
+                st.rerun()
+        else:
+            if st.button("Return to Journal", key="main_button", help="Go back to the main journal page", type="primary"):
+                st.session_state.page = "main"
+                if 'selected_question' in st.session_state:
+                    del st.session_state.selected_question
+                st.rerun()
+        
+        # Only show past entries after user has logged in
+        st.header("Past Entries")
+        entries = get_past_entries(st.session_state.user_email)
+        if entries:
+            current_date = None
+            for entry_id, date, time, summary in entries:
+                if date != current_date:
+                    st.subheader(date)
+                    current_date = date
+                if st.button(f"Entry at {time}", key=f"view_{entry_id}"):
+                    st.session_state.selected_entry = (entry_id, date, time, summary)
+                    st.session_state.page = "main"  # Ensure we're on the main page to view the entry
+                    st.rerun()
+        else:
+            st.info("No past entries found.")
