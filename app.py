@@ -6,21 +6,6 @@ import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
 
-st.markdown("""
-<style>
-    .stButton>button {
-        color: #ffffff;
-        background-color: #28a745;
-        border-color: #28a745;
-    }
-    .stButton>button:hover {
-        color: #ffffff;
-        background-color: #218838;
-        border-color: #1e7e34;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # Load environment variables
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 today = datetime.today().strftime('%Y-%m-%d')
@@ -139,6 +124,23 @@ if "page" not in st.session_state:
     st.session_state.page = "main"
 
 # Sidebar for user info and past entries
+st.markdown("""
+        <style>
+        .stButton > button {
+            background-color: #4CAF50;  /* Green background */
+            color: white;               /* White text */
+            font-weight: bold;          /* Bold text */
+            border: none;               /* No border */
+            border-radius: 4px;         /* Rounded corners */
+            padding: 10px 24px;         /* Larger padding */
+        }
+        .stButton > button:hover {
+            background-color: #45a049;  /* Darker green on hover */
+            color: white;               /* White text */
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
 with st.sidebar:
     st.title("Journal Dashboard")
     
