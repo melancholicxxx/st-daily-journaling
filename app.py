@@ -139,22 +139,6 @@ with st.sidebar:
         st.write(f"Welcome back, {st.session_state.user_name}!")
         
         # Add button to go to new journal entry page
-        st.markdown("""
-        <style>
-        .stButton > button {
-            background-color: #4CAF50;  /* Green background */
-            color: white;               /* White text */
-            font-weight: bold;          /* Bold text */
-            border: none;               /* No border */
-            border-radius: 4px;         /* Rounded corners */
-            padding: 10px 24px;         /* Larger padding */
-        }
-        .stButton > button:hover {
-            background-color: #45a049;  /* Darker green on hover */
-            color: white;               /* White text */
-        }
-        </style>
-        """, unsafe_allow_html=True)
         if st.button("New Journal Entry", key="new_entry_button"):
             st.session_state.page = "main"
             st.session_state.conversation_ended = False
