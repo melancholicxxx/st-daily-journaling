@@ -138,6 +138,19 @@ with st.sidebar:
     else:
         st.write(f"Welcome back, {st.session_state.user_name}!")
         
+        # Add button to go to new journal entry page
+        if st.button("New Journal Entry", key="new_entry_button"):
+            st.session_state.page = "main"
+            st.session_state.conversation_ended = False
+            st.session_state.messages = []
+            st.session_state.first_response_given = False
+            st.session_state.summary_generated = False
+            if 'summary' in st.session_state:
+                del st.session_state.summary
+            if 'selected_entry' in st.session_state:
+                del st.session_state.selected_entry
+            st.rerun()
+        
         # Add button to go to RAG page
         if st.button("Ask anything about yourself", key="rag_button", help="Ask questions about your past journal entries"):
             st.session_state.page = "rag"
