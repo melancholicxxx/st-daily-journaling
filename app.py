@@ -6,6 +6,21 @@ import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
 
+st.markdown("""
+<style>
+    .stButton>button {
+        color: #ffffff;
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    .stButton>button:hover {
+        color: #ffffff;
+        background-color: #218838;
+        border-color: #1e7e34;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Load environment variables
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 today = datetime.today().strftime('%Y-%m-%d')
@@ -139,7 +154,7 @@ with st.sidebar:
         st.write(f"Welcome back, {st.session_state.user_name}!")
         
         # Add button to go to new journal entry page
-        if st.button("New Journal Entry", key="new_entry_button", type="primary"):
+        if st.button("New Journal Entry", key="new_entry_button"):
             st.session_state.page = "main"
             st.session_state.conversation_ended = False
             st.session_state.messages = []
@@ -152,7 +167,7 @@ with st.sidebar:
             st.rerun()
         
         # Add button to go to RAG page
-        if st.button("Ask anything about yourself", key="rag_button", help="Ask questions about your past journal entries", type="primary"):
+        if st.button("Ask anything about yourself", key="rag_button", help="Ask questions about your past journal entries"):
             st.session_state.page = "rag"
             st.rerun()
         
