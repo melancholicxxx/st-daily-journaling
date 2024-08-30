@@ -297,7 +297,7 @@ elif st.session_state.page == "rag":
     context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary in entries])
 
     # Text input for custom or selected question
-    user_query = st.text_input(value=st.session_state.get('selected_question', ''), placeholder="Select a question from below or type your own")
+    user_query = st.text_input("", value=st.session_state.get('selected_question', ''), placeholder="Select a question from below or type your own")
 
     # Predefined questions
     predefined_questions = [
