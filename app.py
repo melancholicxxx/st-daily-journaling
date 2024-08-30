@@ -314,27 +314,8 @@ elif st.session_state.page == "rag":
             st.session_state.selected_question = question
             st.rerun()  # Add this line to update the input box immediately
 
-    # Create columns for the "Analyze" and "Return to Journal" buttons
-    col1, col2 = st.columns(2)
-
-    with col1:
-        analyze_button = st.button("Analyze", type="primary")
-
-    with col2:
-        if st.button("Return to Journal"):
-            st.session_state.page = "main"
-            # Reset session state for new journal entry
-            st.session_state.conversation_ended = False
-            st.session_state.messages = []
-            st.session_state.first_response_given = False
-            st.session_state.summary_generated = False
-            if 'summary' in st.session_state:
-                del st.session_state.summary
-            if 'selected_entry' in st.session_state:
-                del st.session_state.selected_entry
-            if 'selected_question' in st.session_state:
-                del st.session_state.selected_question
-            st.rerun()
+    # Create a single column for the "Analyze" button
+    analyze_button = st.button("Analyze", type="primary")
 
     if user_query and analyze_button:
         with st.spinner("Analyzing your journal entries..."):
