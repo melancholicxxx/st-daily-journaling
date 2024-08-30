@@ -152,7 +152,7 @@ with st.sidebar:
             st.rerun()
         
         # Add button to go to RAG page
-        if st.button("Ask anything about yourself", key="rag_button", help="Ask questions about your past journal entries"):
+        if st.button("Ask anything about yourself", key="rag_button", help="Ask questions about your past journal entries", type="secondary"):
             st.session_state.page = "rag"
             st.rerun()
         
