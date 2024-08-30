@@ -283,7 +283,7 @@ if st.session_state.page == "main":
         st.info("Please enter your email and name in the sidebar to start journaling.")
 
 elif st.session_state.page == "rag":
-    st.title("Ask anything about yourself")
+    st.title("Ask anything about yourself, based on past journal entries")
 
     if st.session_state.user_email is None:
         st.warning("Please log in first.")
