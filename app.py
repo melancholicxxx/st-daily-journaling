@@ -200,6 +200,7 @@ if st.session_state.page == "main":
             entry_id, date, time, summary, emotions = st.session_state.selected_entry
             st.header(f"Entry from {date} at {time}")
             st.write(summary)
+            st.write("Emotions:", emotions)  # Add this line to display emotions
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("Create New Entry"):
