@@ -37,19 +37,20 @@ def init_db():
          user_name TEXT,
          date TEXT,
          time TEXT,
-         summary TEXT)
+         summary TEXT,
+         emotions TEXT)
     ''')
     conn.commit()
     cur.close()
     conn.close()
 
-def save_to_db(user_email, user_name, summary):
+def save_to_db(user_email, user_name, summary, emotions):
     conn = get_db_connection()
     cur = conn.cursor()
     current_time = datetime.now().strftime('%H:%M:%S')
     cur.execute(
-        "INSERT INTO logs (user_email, user_name, date, time, summary) VALUES (%s, %s, %s, %s, %s)",
-        (user_email, user_name, today, current_time, summary)
+        "INSERT INTO logs (user_email, user_name, date, time, summary, emotions) VALUES (%s, %s, %s, %s, %s, %s)",
+        (user_email, user_name, today, current_time, summary, emotions)
     )
     conn.commit()
     cur.close()
@@ -59,7 +60,7 @@ def get_past_entries(user_email):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
-        "SELECT id, date, time, summary FROM logs WHERE user_email = %s ORDER BY date DESC, time DESC",
+        "SELECT id, date, time, summary, emotions FROM logs WHERE user_email = %s ORDER BY date DESC, time DESC",
         (user_email,)
     )
     entries = cur.fetchall()
@@ -69,12 +70,12 @@ def get_past_entries(user_email):
     # Format the date and time
     formatted_entries = []
     for entry in entries:
-        entry_id, date_str, time_str, summary = entry
+        entry_id, date_str, time_str, summary, emotions = entry
         date_obj = datetime.strptime(date_str, '%Y-%m-%d')
         time_obj = datetime.strptime(time_str, '%H:%M:%S')
         formatted_date = date_obj.strftime('%d %B %Y')
         formatted_time = time_obj.strftime('%I:%M%p').lower()
-        formatted_entries.append((entry_id, formatted_date, formatted_time, summary))
+        formatted_entries.append((entry_id, formatted_date, formatted_time, summary, emotions))
     
     return formatted_entries
 
@@ -96,6 +97,21 @@ def generate_summary(messages):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=summary_messages,
+        temperature=0.1,
+        stream=False,
+    )
+    return response.choices[0].message.content
+
+def detect_emotions(messages):
+    emotion_prompt = "Analyze the conversation and detect the predominant emotions expressed. Tag the conversation with one or more of the following emotions: Joy, Sadness, Fear, Anger, Frustration. Return only the emotion tags separated by commas, without any additional text or explanation."
+    emotion_messages = [
+        {"role": "system", "content": "You are an emotion detection assistant. Analyze the conversation and return only the relevant emotion tags."},
+        {"role": "user", "content": emotion_prompt},
+    ] + messages
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=emotion_messages,
         temperature=0.1,
         stream=False,
     )
@@ -161,12 +177,12 @@ with st.sidebar:
         entries = get_past_entries(st.session_state.user_email)
         if entries:
             current_date = None
-            for entry_id, date, time, summary in entries:
+            for entry_id, date, time, summary, emotions in entries:
                 if date != current_date:
                     st.subheader(date)
                     current_date = date
                 if st.button(f"Entry at {time}", key=f"view_{entry_id}"):
-                    st.session_state.selected_entry = (entry_id, date, time, summary)
+                    st.session_state.selected_entry = (entry_id, date, time, summary, emotions)
                     st.session_state.page = "main"  # Ensure the main page is displayed
                     st.rerun()
         else:
@@ -179,7 +195,7 @@ if st.session_state.page == "main":
     if st.session_state.user_email and st.session_state.user_name:
         # Display selected past entry if any
         if 'selected_entry' in st.session_state:
-            entry_id, date, time, summary = st.session_state.selected_entry
+            entry_id, date, time, summary, emotions = st.session_state.selected_entry
             st.header(f"Entry from {date} at {time}")
             st.write(summary)
             col1, col2 = st.columns(2)
@@ -253,20 +269,23 @@ if st.session_state.page == "main":
             if st.session_state.first_response_given and not st.session_state.conversation_ended and not st.session_state.summary_generated:
                 if st.button("Finish Conversation and Log Entry"):
                     st.session_state.conversation_ended = True
-                    with st.spinner("Generating your journal entry summary..."):
+                    with st.spinner("Generating your journal entry summary and detecting emotions..."):
                         summary = generate_summary(st.session_state.messages)
+                        emotions = detect_emotions(st.session_state.messages)
                     
-                    # Save summary to database
-                    save_to_db(st.session_state.user_email, st.session_state.user_name, summary)
+                    # Save summary and emotions to database
+                    save_to_db(st.session_state.user_email, st.session_state.user_name, summary, emotions)
                     
                     st.session_state.summary = summary
+                    st.session_state.emotions = emotions
                     st.session_state.summary_generated = True
                     st.rerun()  # Force a rerun to update the UI
 
-            # Display summary if it has been generated
+            # Display summary and emotions if they have been generated
             if st.session_state.summary_generated:
                 st.success("Great job reflecting on your day! Here's your journal entry summary:")
                 st.markdown(st.session_state.summary)
+                st.write("Detected emotions:", st.session_state.emotions)
                 st.info("You can view past journal entries on the left")
 
             # Display a message if the conversation has ended
@@ -294,7 +313,7 @@ elif st.session_state.page == "rag":
     entries = get_past_entries(st.session_state.user_email)
 
     # Combine all entries into a single context string
-    context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary in entries])
+    context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary, _ in entries])
 
     # Text input for custom or selected question
     user_query = st.text_input("", value=st.session_state.get('selected_question', ''), placeholder="Select a question from below or type your own")
