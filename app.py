@@ -127,8 +127,8 @@ def emotion_tag(emotion):
         "Anger": ("#FF4500", "#FFFFFF"),  # Red-Orange background, White text
         "Frustration": ("#8B4513", "#FFFFFF")  # Saddle Brown background, White text
     }
-    color = emotion_colors.get(emotion.strip(), "#808080")  # Default to gray if emotion not found
-    return f'<span style="background-color: {color}; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{emotion}</span>'
+    bg_color, text_color = emotion_colors.get(emotion.strip(), ("#808080", "#FFFFFF"))  # Default to gray bg, white text
+    return f'<span style="background-color: {bg_color}; color: {text_color}; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{emotion}</span>'
 
 
 # Initialize database
