@@ -305,7 +305,12 @@ if st.session_state.page == "main":
             if st.session_state.summary_generated:
                 st.success("Great job reflecting on your day! Here's your journal entry summary:")
                 st.markdown(st.session_state.summary)
-                st.write("Detected emotions:", st.session_state.emotions)
+                
+                # Display emotions with colored tags
+                st.write("Detected emotions:")
+                emotion_html = "".join(emotion_tag(e.strip()) for e in st.session_state.emotions.split(','))
+                st.markdown(emotion_html, unsafe_allow_html=True)
+                
                 st.info("You can view past journal entries on the left")
 
             # Display a message if the conversation has ended
@@ -349,7 +354,7 @@ elif st.session_state.page == "rag":
 
     # Create buttons for predefined questions
     for question in predefined_questions:
-        if st.button(question, key=f"btn_{question}"):
+          if st.button(question, key=f"btn_{question}"):
             st.session_state.selected_question = question
             st.rerun()  # Add this line to update the input box immediately
 
