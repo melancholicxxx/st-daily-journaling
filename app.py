@@ -121,11 +121,11 @@ def detect_emotions(messages):
 
 def emotion_tag(emotion):
     emotion_colors = {
-        "Joy": "#FFD700",      # Gold
-        "Sadness": "#4169E1",  # Royal Blue
-        "Fear": "#800080",     # Purple
-        "Anger": "#FF4500",    # Red-Orange
-        "Frustration": "#8B4513"  # Saddle Brown
+        "Joy": ("#FFD700", "#000000"),  # Gold background, Black text
+        "Sadness": ("#4169E1", "#FFFFFF"),  # Royal Blue background, White text
+        "Fear": ("#800080", "#FFFFFF"),  # Purple background, White text
+        "Anger": ("#FF4500", "#FFFFFF"),  # Red-Orange background, White text
+        "Frustration": ("#8B4513", "#FFFFFF")  # Saddle Brown background, White text
     }
     color = emotion_colors.get(emotion.strip(), "#808080")  # Default to gray if emotion not found
     return f'<span style="background-color: {color}; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{emotion}</span>'
