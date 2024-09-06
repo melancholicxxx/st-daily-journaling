@@ -30,6 +30,11 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
+    
+    # Drop the existing table if it exists
+    cur.execute("DROP TABLE IF EXISTS logs")
+    
+    # Create the table with the new schema
     cur.execute('''
         CREATE TABLE IF NOT EXISTS logs
         (id SERIAL PRIMARY KEY,
