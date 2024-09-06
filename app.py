@@ -121,7 +121,7 @@ def detect_emotions(messages):
 
 def emotion_tag(emotion):
     emotion_colors = {
-        "Joy": ("#FFD700", "#000000"),  # Gold background, Black text
+        "Joy": ("##322E1D", "#FFD700"),  # Gold background, Black text
         "Sadness": ("#4169E1", "#FFFFFF"),  # Royal Blue background, White text
         "Fear": ("#800080", "#FFFFFF"),  # Purple background, White text
         "Anger": ("#FF4500", "#FFFFFF"),  # Red-Orange background, White text
