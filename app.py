@@ -119,6 +119,18 @@ def detect_emotions(messages):
     )
     return response.choices[0].message.content
 
+def emotion_tag(emotion):
+    emotion_colors = {
+        "Joy": "#FFD700",      # Gold
+        "Sadness": "#4169E1",  # Royal Blue
+        "Fear": "#800080",     # Purple
+        "Anger": "#FF4500",    # Red-Orange
+        "Frustration": "#8B4513"  # Saddle Brown
+    }
+    color = emotion_colors.get(emotion.strip(), "#808080")  # Default to gray if emotion not found
+    return f'<span style="background-color: {color}; color: white; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{emotion}</span>'
+
+
 # Initialize database
 init_db()
 
@@ -200,7 +212,12 @@ if st.session_state.page == "main":
             entry_id, date, time, summary, emotions = st.session_state.selected_entry
             st.header(f"Entry from {date} at {time}")
             st.write(summary)
-            st.write("Emotions:", emotions)  # Add this line to display emotions
+            
+            # Display emotions as colored tags
+            st.write("Emotions:")
+            emotion_html = "".join(emotion_tag(e) for e in emotions.split(','))
+            st.markdown(emotion_html, unsafe_allow_html=True)
+            
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("Create New Entry"):
