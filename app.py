@@ -324,7 +324,7 @@ if st.session_state.page == "main":
                         del st.session_state.summary
                     st.rerun()
     else:
-        st.info("Please enter your email and name in the sidebar to start journaling.")
+        st.info("Enter your email and name in the sidebar to start journaling.")
 
 elif st.session_state.page == "rag":
     st.title("Ask anything about yourself, based on past journal entries")
@@ -347,9 +347,9 @@ elif st.session_state.page == "rag":
     predefined_questions = [
         "What brings me the most joy?",
         "What drains my energy most?",
-        "How do I demonstrate love and care?",
         "What are some recurring themes from my entries?",
-        "What book recommendations do you have based on my entries?"
+        "What book recommendations do you have based on my entries?",
+        "Count of entries by emotions"
     ]
 
     # Create buttons for predefined questions
