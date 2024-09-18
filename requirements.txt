@@ -7,3 +7,4 @@ openai-whisper
 numba
 llvmlite
 SpeechRecognition
+pytz
