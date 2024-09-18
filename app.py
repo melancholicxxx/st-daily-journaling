@@ -179,11 +179,10 @@ with st.sidebar:
             st.success(f"Welcome, {user_name}!")
             st.rerun()
     else:
-        st.write(f"Welcome back, {st.session_state.user_name}!")
+        st.write(f"Welcome back, {st.session_state.user_name}! You've created {st.session_state.entries_created_count} journal entries so far.")
         
         # Display entries created count
         entries_count = get_entry_count(st.session_state.user_email)
-        st.write(f"Entries Created: {entries_count}")
         
         # Add button to go to new journal entry page
         if st.button("New Journal Entry", key="new_entry_button", type="primary"):
