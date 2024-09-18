@@ -349,7 +349,7 @@ elif st.session_state.page == "rag":
         "What drains my energy most?",
         "What are some recurring themes from my entries?",
         "What book recommendations do you have based on my entries?",
-        "Count of entries by emotions"
+        "Count of entries by emotions and give the corresponding dates" #"Count of entries by emotions"
     ]
 
     # Create buttons for predefined questions
