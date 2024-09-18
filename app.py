@@ -176,7 +176,7 @@ with st.sidebar:
             st.rerun()
     else:
         entries_count = get_entries_count(st.session_state.user_email)
-        st.markdown(f"Welcome back, {st.session_state.user_name}! You've created **{entries_count}** journal entries so far.")
+        st.markdown(f"Welcome back, {st.session_state.user_name}! You've created **{entries_count}** entries so far. Onwards and forwards we go!")
         
         # Add button to go to new journal entry page
         if st.button("New Journal Entry", key="new_entry_button", type="primary"):
