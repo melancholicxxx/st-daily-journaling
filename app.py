@@ -152,6 +152,8 @@ if "summary_generated" not in st.session_state:
     st.session_state.summary_generated = False
 if "page" not in st.session_state:
     st.session_state.page = "main"
+if "conversation_count" not in st.session_state:
+    st.session_state.conversation_count = 0  # Initialize conversation counter
 
 # Sidebar for user info and past entries
 with st.sidebar:
@@ -168,6 +170,9 @@ with st.sidebar:
     else:
         st.write(f"Welcome back, {st.session_state.user_name}!")
         
+        # Display conversation count
+        st.write(f"Conversations started: {st.session_state.conversation_count}")
+        
         # Add button to go to new journal entry page
         if st.button("New Journal Entry", key="new_entry_button", type="primary"):
             st.session_state.page = "main"
@@ -175,6 +180,7 @@ with st.sidebar:
             st.session_state.messages = []
             st.session_state.first_response_given = False
             st.session_state.summary_generated = False
+            st.session_state.conversation_count += 1  # Increment counter
             if 'summary' in st.session_state:
                 del st.session_state.summary
             if 'selected_entry' in st.session_state:
@@ -226,6 +232,7 @@ if st.session_state.page == "main":
                     st.session_state.messages = []
                     st.session_state.first_response_given = False
                     st.session_state.summary_generated = False
+                    st.session_state.conversation_count += 1  # Increment counter
                     if 'summary' in st.session_state:
                         del st.session_state.summary
                     st.rerun()
@@ -299,6 +306,7 @@ if st.session_state.page == "main":
                     st.session_state.summary = summary
                     st.session_state.emotions = emotions
                     st.session_state.summary_generated = True
+                    st.session_state.conversation_count += 1  # Increment counter
                     st.rerun()  # Force a rerun to update the UI
 
             # Display summary and emotions if they have been generated
@@ -320,6 +328,7 @@ if st.session_state.page == "main":
                     st.session_state.messages = []
                     st.session_state.first_response_given = False
                     st.session_state.summary_generated = False
+                    st.session_state.conversation_count += 1  # Increment counter
                     if 'summary' in st.session_state:
                         del st.session_state.summary
                     st.rerun()
@@ -349,7 +358,63 @@ elif st.session_state.page == "rag":
         "What drains my energy most?",
         "What are some recurring themes from my entries?",
         "What book recommendations do you have based on my entries?",
-        "Count of entries by emotions and give the corresponding dates" #"Count of entries by emotions"
+        "Count of entries by emotions and give the corresponding dates"
+    ]
+
+    # Create buttons for predefined questions
+    for question in predefined_questions:
+          if st.button(question, key=f"btn_{question}"):
+            st.session_state.selected_question = question
+            st.rerun()  # Add this line to update the input box immediately
+
+    # Create a single column for the "Analyze" button
+    analyze_button = st.button("Analyze", type="primary")
+
+    if user_query and analyze_button:
+        with st.spinner("Analyzing your journal entries..."):
+            messages = [
+                {"role": "system", "content": "You are an AI assistant analyzing journal entries. Use the provided context to answer the user's question."},
+                {"role": "user", "content": f"Context: {context}\n\nQuestion: {user_query}"}
+            ]
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.1,
+            )
+
+            st.write("Answer:")
+            st.write(response.choices[0].message.content)
+
+    # Clear the selected question when leaving the RAG page
+    if st.session_state.page != "rag":
+        if 'selected_question' in st.session_state:
+            del st.session_state.selected_question
+
+elif st.session_state.page == "rag":
+    st.title("Ask anything about yourself, based on past journal entries")
+
+    if st.session_state.user_email is None:
+        st.warning("Please log in first.")
+        st.session_state.page = "main"
+        st.rerun()
+
+    # Fetch all user's entries
+    entries = get_past_entries(st.session_state.user_email)
+
+    # Combine all entries into a single context string
+    context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary, _ in entries])
+
+    # Text input for custom or selected question
+    user_query = st.text_input("", value=st.session_state.get('selected_question', ''), placeholder="Select a question from below or type your own")
+
+    # Predefined questions
+    predefined_questions = [
+        "What brings me the most joy?",
+        "What drains my energy most?",
+        "What are some recurring themes from my entries?",
+        "What book recommendations do you have based on my entries?",
+        "Count of entries by emotions and give the corresponding dates"
     ]
 
     # Create buttons for predefined questions
