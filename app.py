@@ -152,8 +152,8 @@ if "summary_generated" not in st.session_state:
     st.session_state.summary_generated = False
 if "page" not in st.session_state:
     st.session_state.page = "main"
-if "conversation_count" not in st.session_state:
-    st.session_state.conversation_count = 0  # Initialize conversation counter
+if "entries_created_count" not in st.session_state:
+    st.session_state.entries_created_count = 0  # Initialize entries created counter
 
 # Sidebar for user info and past entries
 with st.sidebar:
@@ -170,8 +170,8 @@ with st.sidebar:
     else:
         st.write(f"Welcome back, {st.session_state.user_name}!")
         
-        # Display conversation count
-        st.write(f"Conversations started: {st.session_state.conversation_count}")
+        # Display entries created count
+        st.write(f"Entries Created: {st.session_state.entries_created_count}")
         
         # Add button to go to new journal entry page
         if st.button("New Journal Entry", key="new_entry_button", type="primary"):
@@ -180,7 +180,7 @@ with st.sidebar:
             st.session_state.messages = []
             st.session_state.first_response_given = False
             st.session_state.summary_generated = False
-            st.session_state.conversation_count += 1  # Increment counter
+            st.session_state.entries_created_count += 1  # Increment counter
             if 'summary' in st.session_state:
                 del st.session_state.summary
             if 'selected_entry' in st.session_state:
@@ -232,7 +232,7 @@ if st.session_state.page == "main":
                     st.session_state.messages = []
                     st.session_state.first_response_given = False
                     st.session_state.summary_generated = False
-                    st.session_state.conversation_count += 1  # Increment counter
+                    st.session_state.entries_created_count += 1  # Increment counter
                     if 'summary' in st.session_state:
                         del st.session_state.summary
                     st.rerun()
@@ -306,7 +306,7 @@ if st.session_state.page == "main":
                     st.session_state.summary = summary
                     st.session_state.emotions = emotions
                     st.session_state.summary_generated = True
-                    st.session_state.conversation_count += 1  # Increment counter
+                    st.session_state.entries_created_count += 1  # Increment counter
                     st.rerun()  # Force a rerun to update the UI
 
             # Display summary and emotions if they have been generated
@@ -328,7 +328,7 @@ if st.session_state.page == "main":
                     st.session_state.messages = []
                     st.session_state.first_response_given = False
                     st.session_state.summary_generated = False
-                    st.session_state.conversation_count += 1  # Increment counter
+                    st.session_state.entries_created_count += 1  # Increment counter
                     if 'summary' in st.session_state:
                         del st.session_state.summary
                     st.rerun()
