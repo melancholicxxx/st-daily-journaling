@@ -10,6 +10,7 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import json
+import secrets
 
 # Set page config at the very beginning
 st.set_page_config(layout="wide")
@@ -26,7 +27,6 @@ CLIENT_CONFIG = {
         "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
         "token_uri": "https://oauth2.googleapis.com/token",
-        "redirect_uris": [os.environ["GOOGLE_REDIRECT_URI"]]
     }
 }
 
@@ -170,7 +170,7 @@ def create_flow():
     return Flow.from_client_config(
         client_config=CLIENT_CONFIG,
         scopes=SCOPES,
-        redirect_uri=CLIENT_CONFIG['web']['redirect_uris'][0]
+        redirect_uri=os.environ["GOOGLE_REDIRECT_URI"]
     )
 
 def get_user_info(credentials):
@@ -196,25 +196,41 @@ if "summary_generated" not in st.session_state:
     st.session_state.summary_generated = False
 if "page" not in st.session_state:
     st.session_state.page = "main"
-if "credentials" not in st.session_state:
-    st.session_state.credentials = None
+if "oauth_state" not in st.session_state:
+    st.session_state.oauth_state = None
+
+# Handle OAuth flow
+params = st.experimental_get_query_params()
+if "code" in params and "state" in params:
+    if st.session_state.oauth_state == params["state"][0]:
+        try:
+            flow = create_flow()
+            flow.fetch_token(code=params["code"][0])
+            credentials = flow.credentials
+            st.session_state.credentials = credentials.to_json()
+            email, name = get_user_info(credentials)
+            st.session_state.user_email = email
+            st.session_state.user_name = name
+            st.success(f"Successfully logged in as {name}")
+            st.experimental_set_query_params()
+            st.experimental_rerun()
+        except Exception as e:
+            st.error(f"An error occurred during login: {str(e)}")
+            st.session_state.oauth_state = None
+    else:
+        st.error("Invalid state parameter. Please try logging in again.")
+        st.session_state.oauth_state = None
 
 # Sidebar for user info and past entries
 with st.sidebar:
     st.title("Journal Dashboard")
     
     if st.session_state.user_email is None or st.session_state.user_name is None:
-        if st.session_state.credentials is None:
+        if st.button("Login with Google"):
             flow = create_flow()
-            auth_url, _ = flow.authorization_url(prompt='consent')
-            st.markdown(f"[Login with Google]({auth_url})")
-        else:
-            credentials = Credentials.from_authorized_user_info(json.loads(st.session_state.credentials))
-            user_email, user_name = get_user_info(credentials)
-            st.session_state.user_email = user_email
-            st.session_state.user_name = user_name
-            st.success(f"Welcome, {user_name}!")
-            st.rerun()
+            st.session_state.oauth_state = secrets.token_urlsafe(16)
+            authorization_url, _ = flow.authorization_url(state=st.session_state.oauth_state, prompt='consent')
+            st.markdown(f"[Click here to login with Google]({authorization_url})")
     else:
         entries_count = get_entries_count(st.session_state.user_email)
         st.markdown(f"Welcome back, {st.session_state.user_name}! You've created **{entries_count}** entries so far. Continue on the path!")
@@ -253,14 +269,12 @@ with st.sidebar:
         else:
             st.info("No past entries found.")
 
-# Handle Google OAuth callback
-if 'code' in st.experimental_get_query_params():
-    flow = create_flow()
-    flow.fetch_token(code=st.experimental_get_query_params()['code'][0])
-    credentials = flow.credentials
-    st.session_state.credentials = credentials.to_json()
-    st.experimental_set_query_params()
-    st.rerun()
+        # Add logout button
+        if st.button("Logout"):
+            for key in ['user_email', 'user_name', 'credentials', 'oauth_state']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.experimental_rerun()
 
 # Main area for new entries and displaying selected past entry
 if st.session_state.page == "main":
@@ -384,7 +398,7 @@ if st.session_state.page == "main":
                         del st.session_state.summary
                     st.rerun()
     else:
-        st.info("Please log in with Google to start journaling.")
+        st.info("Enter your email and name in the sidebar to start journaling.")
 
 elif st.session_state.page == "rag":
     st.title("Ask anything about yourself, based on past journal entries")
@@ -437,7 +451,7 @@ elif st.session_state.page == "rag":
             st.write("Answer:")
             st.write(response.choices[0].message.content)
 
-# Clear the selected question when leaving the RAG page
-if st.session_state.page != "rag":
-    if 'selected_question' in st.session_state:
-        del st.session_state.selected_question
+    # Clear the selected question when leaving the RAG page
+    if st.session_state.page != "rag":
+        if 'selected_question' in st.session_state:
+            del st.session_state.selected_question
