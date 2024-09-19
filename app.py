@@ -201,23 +201,26 @@ if "oauth_state" not in st.session_state:
 
 # Handle OAuth flow
 params = st.experimental_get_query_params()
-if "code" in params:
-    try:
-        flow = create_flow()
-        flow.fetch_token(code=params["code"][0])
-        credentials = flow.credentials
-        st.session_state.credentials = credentials.to_json()
-        email, name = get_user_info(credentials)
-        st.session_state.user_email = email
-        st.session_state.user_name = name
-        st.success(f"Successfully logged in as {name}")
-        st.experimental_set_query_params()
-        st.rerun()
-    except Exception as e:
-        st.error(f"An error occurred during login: {str(e)}")
-        st.error(f"Error type: {type(e).__name__}")
-        st.error(f"Error details: {e.__dict__}")
-        st.session_state.oauth_state = None
+if "code" in params and "state" in params:
+    if st.session_state.oauth_state == params["state"][0]:
+        try:
+            flow = create_flow()
+            flow.fetch_token(code=params["code"][0])
+            credentials = flow.credentials
+            st.session_state.credentials = credentials.to_json()
+            email, name = get_user_info(credentials)
+            st.session_state.user_email = email
+            st.session_state.user_name = name
+            st.success(f"Successfully logged in as {name}")
+            st.experimental_set_query_params()
+            st.rerun()
+        except Exception as e:
+            st.error(f"An error occurred during login: {str(e)}")
+            st.error(f"Error type: {type(e).__name__}")
+            st.error(f"Error details: {e.__dict__}")
+    else:
+        st.error("Invalid state parameter. Please try logging in again.")
+    st.session_state.oauth_state = None
 
 # Sidebar for user info and past entries
 with st.sidebar:
@@ -226,7 +229,12 @@ with st.sidebar:
     if st.session_state.user_email is None or st.session_state.user_name is None:
         if st.button("Login with Google"):
             flow = create_flow()
-            authorization_url, _ = flow.authorization_url(prompt='consent', access_type='offline')
+            st.session_state.oauth_state = secrets.token_urlsafe(16)
+            authorization_url, _ = flow.authorization_url(
+                state=st.session_state.oauth_state,
+                access_type='offline',
+                prompt='consent'
+            )
             st.markdown(f"[Click here to login with Google]({authorization_url})")
     else:
         entries_count = get_entries_count(st.session_state.user_email)
