@@ -212,7 +212,7 @@ if "code" in params:
         st.session_state.user_name = name
         st.success(f"Successfully logged in as {name}")
         st.experimental_set_query_params()
-        st.experimental_rerun()
+        st.rerun()
     except Exception as e:
         st.error(f"An error occurred during login: {str(e)}")
         st.session_state.oauth_state = None
@@ -269,7 +269,7 @@ with st.sidebar:
             for key in ['user_email', 'user_name', 'credentials', 'oauth_state']:
                 if key in st.session_state:
                     del st.session_state[key]
-            st.experimental_rerun()
+            st.rerun()
 
 # Main area for new entries and displaying selected past entry
 if st.session_state.page == "main":
