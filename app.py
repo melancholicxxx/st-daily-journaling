@@ -11,6 +11,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import json
 import secrets
+import time
 
 # Set page config at the very beginning
 st.set_page_config(layout="wide")
@@ -196,13 +197,34 @@ if "summary_generated" not in st.session_state:
     st.session_state.summary_generated = False
 if "page" not in st.session_state:
     st.session_state.page = "main"
-if "oauth_state" not in st.session_state:
-    st.session_state.oauth_state = None
+
+# Use database to store OAuth state
+def save_oauth_state(state):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS oauth_states (state TEXT PRIMARY KEY, timestamp BIGINT)")
+    cur.execute("INSERT INTO oauth_states (state, timestamp) VALUES (%s, %s)", (state, int(time.time())))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def verify_oauth_state(state):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM oauth_states WHERE state = %s", (state,))
+    result = cur.fetchone()
+    if result:
+        # Remove the used state
+        cur.execute("DELETE FROM oauth_states WHERE state = %s", (state,))
+        conn.commit()
+    cur.close()
+    conn.close()
+    return result is not None
 
 # Handle OAuth flow
 params = st.experimental_get_query_params()
 if "code" in params and "state" in params:
-    if st.session_state.oauth_state == params["state"][0]:
+    if verify_oauth_state(params["state"][0]):
         try:
             flow = create_flow()
             flow.fetch_token(code=params["code"][0])
@@ -220,7 +242,6 @@ if "code" in params and "state" in params:
             st.error(f"Error details: {e.__dict__}")
     else:
         st.error("Invalid state parameter. Please try logging in again.")
-    st.session_state.oauth_state = None
 
 # Sidebar for user info and past entries
 with st.sidebar:
@@ -229,9 +250,10 @@ with st.sidebar:
     if st.session_state.user_email is None or st.session_state.user_name is None:
         if st.button("Login with Google"):
             flow = create_flow()
-            st.session_state.oauth_state = secrets.token_urlsafe(16)
+            state = secrets.token_urlsafe(16)
+            save_oauth_state(state)
             authorization_url, _ = flow.authorization_url(
-                state=st.session_state.oauth_state,
+                state=state,
                 access_type='offline',
                 prompt='consent'
             )
@@ -276,7 +298,7 @@ with st.sidebar:
 
         # Add logout button
         if st.button("Logout"):
-            for key in ['user_email', 'user_name', 'credentials', 'oauth_state']:
+            for key in ['user_email', 'user_name', 'credentials']:
                 if key in st.session_state:
                     del st.session_state[key]
             st.rerun()
