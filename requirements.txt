@@ -8,3 +8,5 @@ numba
 llvmlite
 SpeechRecognition
 pytz
+google-auth
+google-auth-oauthlib
