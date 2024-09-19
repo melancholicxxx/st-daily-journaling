@@ -215,6 +215,8 @@ if "code" in params:
         st.rerun()
     except Exception as e:
         st.error(f"An error occurred during login: {str(e)}")
+        st.error(f"Error type: {type(e).__name__}")
+        st.error(f"Error details: {e.__dict__}")
         st.session_state.oauth_state = None
 
 # Sidebar for user info and past entries
@@ -224,7 +226,7 @@ with st.sidebar:
     if st.session_state.user_email is None or st.session_state.user_name is None:
         if st.button("Login with Google"):
             flow = create_flow()
-            authorization_url, _ = flow.authorization_url(prompt='consent')
+            authorization_url, _ = flow.authorization_url(prompt='consent', access_type='offline')
             st.markdown(f"[Click here to login with Google]({authorization_url})")
     else:
         entries_count = get_entries_count(st.session_state.user_email)
