@@ -6,10 +6,6 @@ import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
 import pytz
-from google_auth_oauthlib.flow import Flow
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-import json
 
 # Set page config at the very beginning
 st.set_page_config(layout="wide")
@@ -18,19 +14,6 @@ st.set_page_config(layout="wide")
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 timezone = pytz.timezone('Asia/Singapore')  # GMT+8
 today = datetime.now(timezone).strftime('%Y-%m-%d')
-
-# Google OAuth Configuration
-CLIENT_CONFIG = {
-    "web": {
-        "client_id": os.environ["GOOGLE_CLIENT_ID"],
-        "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "redirect_uris": [os.environ["GOOGLE_REDIRECT_URI"]]
-    }
-}
-
-SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
 
 # Database setup and functions
 def get_db_connection():
@@ -165,18 +148,6 @@ def emotion_tag(emotion):
     bg_color, text_color = emotion_colors.get(emotion.strip(), ("#808080", "#FFFFFF"))  # Default to gray bg, white text
     return f'<span style="background-color: {bg_color}; color: {text_color}; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{emotion}</span>'
 
-# Google SSO functions
-def create_flow():
-    return Flow.from_client_config(
-        client_config=CLIENT_CONFIG,
-        scopes=SCOPES,
-        redirect_uri=CLIENT_CONFIG['web']['redirect_uris'][0]
-    )
-
-def get_user_info(credentials):
-    service = build('oauth2', 'v2', credentials=credentials)
-    user_info = service.userinfo().get().execute()
-    return user_info.get('email'), user_info.get('name')
 
 # Initialize database
 init_db()
@@ -196,21 +167,15 @@ if "summary_generated" not in st.session_state:
     st.session_state.summary_generated = False
 if "page" not in st.session_state:
     st.session_state.page = "main"
-if "credentials" not in st.session_state:
-    st.session_state.credentials = None
 
 # Sidebar for user info and past entries
 with st.sidebar:
     st.title("Journal Dashboard")
     
     if st.session_state.user_email is None or st.session_state.user_name is None:
-        if st.session_state.credentials is None:
-            flow = create_flow()
-            auth_url, _ = flow.authorization_url(prompt='consent')
-            st.markdown(f"[Login with Google]({auth_url})")
-        else:
-            credentials = Credentials.from_authorized_user_info(json.loads(st.session_state.credentials))
-            user_email, user_name = get_user_info(credentials)
+        user_email = st.text_input("What's your email?")
+        user_name = st.text_input("What's your name?")
+        if user_email and user_name:
             st.session_state.user_email = user_email
             st.session_state.user_name = user_name
             st.success(f"Welcome, {user_name}!")
@@ -252,15 +217,6 @@ with st.sidebar:
                     st.rerun()
         else:
             st.info("No past entries found.")
-
-# Handle Google OAuth callback
-if 'code' in st.experimental_get_query_params():
-    flow = create_flow()
-    flow.fetch_token(code=st.experimental_get_query_params()['code'][0])
-    credentials = flow.credentials
-    st.session_state.credentials = credentials.to_json()
-    st.experimental_set_query_params()
-    st.rerun()
 
 # Main area for new entries and displaying selected past entry
 if st.session_state.page == "main":
@@ -384,7 +340,7 @@ if st.session_state.page == "main":
                         del st.session_state.summary
                     st.rerun()
     else:
-        st.info("Please log in with Google to start journaling.")
+        st.info("Enter your email and name in the sidebar to start journaling.")
 
 elif st.session_state.page == "rag":
     st.title("Ask anything about yourself, based on past journal entries")
@@ -437,7 +393,7 @@ elif st.session_state.page == "rag":
             st.write("Answer:")
             st.write(response.choices[0].message.content)
 
-# Clear the selected question when leaving the RAG page
-if st.session_state.page != "rag":
-    if 'selected_question' in st.session_state:
-        del st.session_state.selected_question
+    # Clear the selected question when leaving the RAG page
+    if st.session_state.page != "rag":
+        if 'selected_question' in st.session_state:
+            del st.session_state.selected_question
