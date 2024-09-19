@@ -6,12 +6,6 @@ import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
 import pytz
-from google_auth_oauthlib.flow import Flow
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-import json
-import secrets
-import time
 
 # Set page config at the very beginning
 st.set_page_config(layout="wide")
@@ -20,18 +14,6 @@ st.set_page_config(layout="wide")
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 timezone = pytz.timezone('Asia/Singapore')  # GMT+8
 today = datetime.now(timezone).strftime('%Y-%m-%d')
-
-# Google OAuth Configuration
-CLIENT_CONFIG = {
-    "web": {
-        "client_id": os.environ["GOOGLE_CLIENT_ID"],
-        "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-    }
-}
-
-SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
 
 # Database setup and functions
 def get_db_connection():
@@ -166,18 +148,6 @@ def emotion_tag(emotion):
     bg_color, text_color = emotion_colors.get(emotion.strip(), ("#808080", "#FFFFFF"))  # Default to gray bg, white text
     return f'<span style="background-color: {bg_color}; color: {text_color}; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{emotion}</span>'
 
-# Google SSO functions
-def create_flow():
-    return Flow.from_client_config(
-        client_config=CLIENT_CONFIG,
-        scopes=SCOPES,
-        redirect_uri=os.environ["GOOGLE_REDIRECT_URI"]
-    )
-
-def get_user_info(credentials):
-    service = build('oauth2', 'v2', credentials=credentials)
-    user_info = service.userinfo().get().execute()
-    return user_info.get('email'), user_info.get('name')
 
 # Initialize database
 init_db()
@@ -198,66 +168,18 @@ if "summary_generated" not in st.session_state:
 if "page" not in st.session_state:
     st.session_state.page = "main"
 
-# Use database to store OAuth state
-def save_oauth_state(state):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS oauth_states (state TEXT PRIMARY KEY, timestamp BIGINT)")
-    cur.execute("INSERT INTO oauth_states (state, timestamp) VALUES (%s, %s)", (state, int(time.time())))
-    conn.commit()
-    cur.close()
-    conn.close()
-
-def verify_oauth_state(state):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM oauth_states WHERE state = %s", (state,))
-    result = cur.fetchone()
-    if result:
-        # Remove the used state
-        cur.execute("DELETE FROM oauth_states WHERE state = %s", (state,))
-        conn.commit()
-    cur.close()
-    conn.close()
-    return result is not None
-
-# Handle OAuth flow
-params = st.experimental_get_query_params()
-if "code" in params and "state" in params:
-    if verify_oauth_state(params["state"][0]):
-        try:
-            flow = create_flow()
-            flow.fetch_token(code=params["code"][0])
-            credentials = flow.credentials
-            st.session_state.credentials = credentials.to_json()
-            email, name = get_user_info(credentials)
-            st.session_state.user_email = email
-            st.session_state.user_name = name
-            st.success(f"Successfully logged in as {name}")
-            st.experimental_set_query_params()
-            st.rerun()
-        except Exception as e:
-            st.error(f"An error occurred during login: {str(e)}")
-            st.error(f"Error type: {type(e).__name__}")
-            st.error(f"Error details: {e.__dict__}")
-    else:
-        st.error("Invalid state parameter. Please try logging in again.")
-
 # Sidebar for user info and past entries
 with st.sidebar:
     st.title("Journal Dashboard")
     
     if st.session_state.user_email is None or st.session_state.user_name is None:
-        if st.button("Login with Google"):
-            flow = create_flow()
-            state = secrets.token_urlsafe(16)
-            save_oauth_state(state)
-            authorization_url, _ = flow.authorization_url(
-                state=state,
-                access_type='offline',
-                prompt='consent'
-            )
-            st.markdown(f"[Click here to login with Google]({authorization_url})")
+        user_email = st.text_input("What's your email?")
+        user_name = st.text_input("What's your name?")
+        if user_email and user_name:
+            st.session_state.user_email = user_email
+            st.session_state.user_name = user_name
+            st.success(f"Welcome, {user_name}!")
+            st.rerun()
     else:
         entries_count = get_entries_count(st.session_state.user_email)
         st.markdown(f"Welcome back, {st.session_state.user_name}! You've created **{entries_count}** entries so far. Continue on the path!")
@@ -295,13 +217,6 @@ with st.sidebar:
                     st.rerun()
         else:
             st.info("No past entries found.")
-
-        # Add logout button
-        if st.button("Logout"):
-            for key in ['user_email', 'user_name', 'credentials']:
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.rerun()
 
 # Main area for new entries and displaying selected past entry
 if st.session_state.page == "main":
