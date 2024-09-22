@@ -149,15 +149,6 @@ def emotion_tag(emotion):
     bg_color, text_color = emotion_colors.get(emotion.strip(), ("#808080", "#FFFFFF"))  # Default to gray bg, white text
     return f'<span style="background-color: {bg_color}; color: {text_color}; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{emotion}</span>'
 
-# Add this function near the top of your file, after the imports
-def open_page(url):
-    open_script= f"""
-        <script>
-            window.open("{url}", "_blank")
-        </script>
-    """
-    components.html(open_script)
-
 # Initialize database
 init_db()
 
@@ -213,8 +204,7 @@ with st.sidebar:
         
         # New button for Mindfulness Podcasts
         podcast_url = "https://www.mindful.org/category/meditation/guided-meditation/"
-        if st.button("Mindfulness Podcasts", type="primary"):
-            open_page(podcast_url)
+        st.markdown(f'<a href="{podcast_url}" target="_blank"><button style="background-color:#FF4B4B;color:white;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;">Mindfulness Podcasts</button></a>', unsafe_allow_html=True)
         
         # Only show past entries after user has logged in
         st.header("Past Entries")
