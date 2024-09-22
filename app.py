@@ -202,9 +202,9 @@ with st.sidebar:
             st.session_state.page = "rag"
             st.rerun()
         
-        # New button below "Ask anything about yourself"
-        if st.button("New Button"):
-            st.write("You clicked the new button!")
+        # New button for Mindfulness Podcasts
+        if st.button("Mindfulness Podcasts", type="primary"):
+            st.markdown("[Click here to listen to Mindfulness Podcasts](https://www.mindful.org/category/meditation/guided-meditation/)")
         
         # Only show past entries after user has logged in
         st.header("Past Entries")
