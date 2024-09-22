@@ -202,6 +202,10 @@ with st.sidebar:
             st.session_state.page = "rag"
             st.rerun()
         
+        # New button below "Ask anything about yourself"
+        if st.button("New Button"):
+            st.write("You clicked the new button!")
+        
         # Only show past entries after user has logged in
         st.header("Past Entries")
         entries = get_past_entries(st.session_state.user_email)
