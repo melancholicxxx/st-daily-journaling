@@ -6,6 +6,7 @@ import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
 import pytz
+import streamlit.components.v1 as components
 
 # Set page config at the very beginning
 st.set_page_config(layout="wide")
@@ -148,6 +149,14 @@ def emotion_tag(emotion):
     bg_color, text_color = emotion_colors.get(emotion.strip(), ("#808080", "#FFFFFF"))  # Default to gray bg, white text
     return f'<span style="background-color: {bg_color}; color: {text_color}; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{emotion}</span>'
 
+# Add this function near the top of your file, after the imports
+def open_page(url):
+    open_script= f"""
+        <script>
+            window.open("{url}", "_blank")
+        </script>
+    """
+    components.html(open_script)
 
 # Initialize database
 init_db()
@@ -205,7 +214,7 @@ with st.sidebar:
         # New button for Mindfulness Podcasts
         podcast_url = "https://www.mindful.org/category/meditation/guided-meditation/"
         if st.button("Mindfulness Podcasts", type="primary"):
-            st.markdown(f'<script>window.open("{podcast_url}", "_blank");</script>', unsafe_allow_html=True)
+            open_page(podcast_url)
         
         # Only show past entries after user has logged in
         st.header("Past Entries")
