@@ -203,7 +203,7 @@ with st.sidebar:
             st.rerun()
         
         # New button for Mindfulness Podcasts
-        podcast_url = "https://www.mindful.org/category/meditation/guided-meditation/"
+        podcast_url = "https://midi-zydeco-b0b.notion.site/Mindfulness-Podcasts-109bc7bdae64802a89e5dee7493dc5c8"
         st.markdown(f'<a href="{podcast_url}" target="_blank"><button style="background-color:#FF4B4B;color:white;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;">Mindfulness Podcasts</button></a>', unsafe_allow_html=True)
         
         # Only show past entries after user has logged in
