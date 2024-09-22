@@ -203,8 +203,10 @@ with st.sidebar:
             st.rerun()
         
         # New button for Mindfulness Podcasts
+        podcast_url = "https://www.mindful.org/category/meditation/guided-meditation/"
         if st.button("Mindfulness Podcasts", type="primary"):
-            st.markdown("[Click here to listen to Mindfulness Podcasts](https://www.mindful.org/category/meditation/guided-meditation/)")
+            st.markdown(f'<a href="{podcast_url}" target="_blank">Click here to open Mindfulness Podcasts</a>', unsafe_allow_html=True)
+            st.markdown(f'<script>window.open("{podcast_url}", "_blank");</script>', unsafe_allow_html=True)
         
         # Only show past entries after user has logged in
         st.header("Past Entries")
