@@ -365,7 +365,7 @@ elif st.session_state.page == "rag":
     chunks = context.split('\n\n')
 
     # Create embeddings for each chunk
-    documents_embeddings = [client.embeddings.create(input=chunk, model="text-embedding-ada-002").data[0].embedding for chunk in chunks]
+    documents_embeddings = [client.embeddings.create(input=chunk, model="text-embedding-3-small").data[0].embedding for chunk in chunks]
     
     # Text input for custom or selected question
     user_query = st.text_input("", value=st.session_state.get('selected_question', ''), placeholder="Select a question from below or type your own")
@@ -391,7 +391,7 @@ elif st.session_state.page == "rag":
     if user_query and analyze_button:
         with st.spinner("Analyzing your journal entries..."):
             # Get the embedding of the query    
-            query_embedding = client.embeddings.create(input=[user_query], model="text-embedding-ada-002").data[0].embedding
+            query_embedding = client.embeddings.create(input=[user_query], model="text-embedding-3-small").data[0].embedding
             
             # Compute the similarity
             similarities = [np.dot(doc_embedding, query_embedding) for doc_embedding in documents_embeddings]
