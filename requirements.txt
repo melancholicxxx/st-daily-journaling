@@ -6,3 +6,5 @@ google-crc32c
 numba
 llvmlite
 pytz
+voyageai
+numpy
