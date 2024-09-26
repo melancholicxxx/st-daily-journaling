@@ -7,6 +7,7 @@ from psycopg2 import sql
 from urllib.parse import urlparse
 import pytz
 import streamlit.components.v1 as components
+import numpy as np
 
 # Set page config at the very beginning
 st.set_page_config(layout="wide")
@@ -364,14 +365,7 @@ elif st.session_state.page == "rag":
     # Split the context into chunks (one chunk per journal entry)
     chunks = context.split('\n\n')
 
-    import voyageai
-    import numpy as np
-
-    vo = voyageai.Client(api_key=os.environ["VOYAGE_API_KEY"])
-
-    documents_embeddings = vo.embed(
-    chunks, model="voyage-3", input_type="document"
-    ).embeddings
+    documents_embeddings = [OpenAI.Embedding.create(input=chunk, model="text-embedding-ada-002")["data"][0]["embedding"] for chunk in chunks]
     #NEW END
     
     
@@ -399,10 +393,10 @@ elif st.session_state.page == "rag":
     #NEW START
     query = user_query
     # Get the embedding of the query    
-    query_embedding = vo.embed([query], model="voyage-3", input_type="query").embeddings[0]
+    query_embedding = client.embeddings.create(input=[query], model="text-embedding-ada-002").data[0].embedding
     
     # Compute the similarity
-    similarities = np.dot(documents_embeddings, query_embedding)
+    similarities = [np.dot(doc_embedding, query_embedding) for doc_embedding in documents_embeddings]
 
     retrieved_id = np.argmax(similarities)
     print(chunks[retrieved_id])
