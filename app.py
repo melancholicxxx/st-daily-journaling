@@ -361,13 +361,11 @@ elif st.session_state.page == "rag":
     # Combine all entries into a single context string
     context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary, _ in entries])
 
-    #NEW START
     # Split the context into chunks (one chunk per journal entry)
     chunks = context.split('\n\n')
 
-    documents_embeddings = [OpenAI.Embedding.create(input=chunk, model="text-embedding-ada-002")["data"][0]["embedding"] for chunk in chunks]
-    #NEW END
-    
+    # Create embeddings for each chunk
+    documents_embeddings = [client.embeddings.create(input=chunk, model="text-embedding-ada-002").data[0].embedding for chunk in chunks]
     
     # Text input for custom or selected question
     user_query = st.text_input("", value=st.session_state.get('selected_question', ''), placeholder="Select a question from below or type your own")
@@ -383,28 +381,23 @@ elif st.session_state.page == "rag":
 
     # Create buttons for predefined questions
     for question in predefined_questions:
-          if st.button(question, key=f"btn_{question}"):
+        if st.button(question, key=f"btn_{question}"):
             st.session_state.selected_question = question
-            st.rerun()  # Add this line to update the input box immediately
+            st.rerun()
 
     # Create a single column for the "Analyze" button
     analyze_button = st.button("Analyze", type="primary")
 
-    #NEW START
-    query = user_query
-    # Get the embedding of the query    
-    query_embedding = client.embeddings.create(input=[query], model="text-embedding-ada-002").data[0].embedding
-    
-    # Compute the similarity
-    similarities = [np.dot(doc_embedding, query_embedding) for doc_embedding in documents_embeddings]
-
-    retrieved_id = np.argmax(similarities)
-    print(chunks[retrieved_id])
-    #NEW END
-
-
     if user_query and analyze_button:
         with st.spinner("Analyzing your journal entries..."):
+            # Get the embedding of the query    
+            query_embedding = client.embeddings.create(input=[user_query], model="text-embedding-ada-002").data[0].embedding
+            
+            # Compute the similarity
+            similarities = [np.dot(doc_embedding, query_embedding) for doc_embedding in documents_embeddings]
+
+            retrieved_id = np.argmax(similarities)
+
             messages = [
                 {"role": "system", "content": "You are an AI assistant analyzing journal entries. Use the provided context to answer the user's question."},
                 {"role": "user", "content": f"Context: {chunks[retrieved_id]}\n\nQuestion: {user_query}"}
