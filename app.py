@@ -360,6 +360,21 @@ elif st.session_state.page == "rag":
     # Combine all entries into a single context string
     context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary, _ in entries])
 
+    #NEW START
+    # Split the context into chunks (one chunk per journal entry)
+    chunks = context.split('\n\n')
+
+    import voyageai
+    import numpy as np
+
+    vo = voyageai.Client(api_key=os.environ["VOYAGE_API_KEY"])
+
+    documents_embeddings = vo.embed(
+    chunks, model="voyage-3", input_type="document"
+    ).embeddings
+    #NEW END
+    
+    
     # Text input for custom or selected question
     user_query = st.text_input("", value=st.session_state.get('selected_question', ''), placeholder="Select a question from below or type your own")
 
@@ -381,11 +396,24 @@ elif st.session_state.page == "rag":
     # Create a single column for the "Analyze" button
     analyze_button = st.button("Analyze", type="primary")
 
+    #NEW START
+    query = user_query
+    # Get the embedding of the query    
+    query_embedding = vo.embed([query], model="voyage-3", input_type="query").embeddings[0]
+    
+    # Compute the similarity
+    similarities = np.dot(documents_embeddings, query_embedding)
+
+    retrieved_id = np.argmax(similarities)
+    print(chunks[retrieved_id])
+    #NEW END
+
+
     if user_query and analyze_button:
         with st.spinner("Analyzing your journal entries..."):
             messages = [
                 {"role": "system", "content": "You are an AI assistant analyzing journal entries. Use the provided context to answer the user's question."},
-                {"role": "user", "content": f"Context: {context}\n\nQuestion: {user_query}"}
+                {"role": "user", "content": f"Context: {chunks[retrieved_id]}\n\nQuestion: {user_query}"}
             ]
 
             response = client.chat.completions.create(
