@@ -221,6 +221,11 @@ with st.sidebar:
                     st.rerun()
         else:
             st.info("No past entries found.")
+        
+        # Add "Share Feedback" link at the bottom of the sidebar
+        st.markdown("---")
+        feedback_url = "https://example.com/feedback"  # Replace with your actual feedback URL
+        st.markdown(f'<div style="text-align: center;"><a href="{feedback_url}" target="_blank">Share Feedback</a></div>', unsafe_allow_html=True)
 
 # Main area for new entries and displaying selected past entry
 if st.session_state.page == "main":
