@@ -400,8 +400,6 @@ if st.session_state.page == "main":
                 st.write("Topics discussed:")
                 topics_html = "".join(topic_tag(t.strip()) for t in st.session_state.topics.split(',') if t.strip() != 'None')
                 st.markdown(topics_html if topics_html else "No specific topics identified", unsafe_allow_html=True)
-                
-                st.info("You can view past journal entries on the left")
 
             # Display a message if the conversation has ended
             if st.session_state.conversation_ended:
@@ -437,11 +435,9 @@ elif st.session_state.page == "rag":
     predefined_questions = [
         "What brings me the most joy?",
         "What drains my energy most?",
-        "What are some recurring themes from my entries?",
+        "What are some recurring topics from my entries?",
         "What book recommendations do you have based on my entries?",
         "Count of entries by emotions and give the corresponding dates",
-        "Who are the people I mention most often in my entries?",
-        "What are the most common topics I discuss in my journal?"
     ]
 
     # Create buttons for predefined questions
