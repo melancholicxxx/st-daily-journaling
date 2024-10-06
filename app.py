@@ -42,7 +42,7 @@ def init_db():
     cur = conn.cursor()
     
     # Drop the existing table if it exists
-    cur.execute("DROP TABLE IF EXISTS logs")
+    #cur.execute("DROP TABLE IF EXISTS logs")
     
     # Create the table with the new schema
     cur.execute('''
