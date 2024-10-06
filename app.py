@@ -41,9 +41,12 @@ def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Create the table with the existing schema and add the new 'people' and 'topics' columns
+    # Drop the existing table if it exists
+    cur.execute("DROP TABLE IF EXISTS logs")
+    
+    # Create the table with the new schema
     cur.execute('''
-        CREATE TABLE IF NOT EXISTS logs
+        CREATE TABLE logs
         (id SERIAL PRIMARY KEY,
          user_email TEXT,
          user_name TEXT,
