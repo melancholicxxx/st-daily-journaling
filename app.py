@@ -41,12 +41,9 @@ def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Drop the existing table if it exists
-    #cur.execute("DROP TABLE IF EXISTS logs")
-    
-    # Create the table with the new schema
+    # Create the table if it doesn't exist
     cur.execute('''
-        CREATE TABLE logs
+        CREATE TABLE IF NOT EXISTS logs
         (id SERIAL PRIMARY KEY,
          user_email TEXT,
          user_name TEXT,
@@ -438,6 +435,7 @@ elif st.session_state.page == "rag":
         "What are some recurring topics from my entries?",
         "What book recommendations do you have based on my entries?",
         "Count of entries by emotions and give the corresponding dates",
+
     ]
 
     # Create buttons for predefined questions
