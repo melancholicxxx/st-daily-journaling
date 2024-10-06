@@ -216,7 +216,6 @@ with st.sidebar:
         if user_email and user_name:
             st.session_state.user_email = user_email
             st.session_state.user_name = user_name
-            st.success(f"Welcome, {user_name}!")
             st.rerun()
     else:
         entries_count = get_entries_count(st.session_state.user_email)
@@ -282,12 +281,12 @@ if st.session_state.page == "main":
             st.markdown(emotion_html, unsafe_allow_html=True)
             
             # Display people as colored tags
-            st.write("People mentioned:")
+            st.write("People:")
             people_html = "".join(people_tag(p) for p in people.split(',') if p.strip() != 'None')
             st.markdown(people_html if people_html else "No specific people mentioned", unsafe_allow_html=True)
             
             # Display topics as colored tags
-            st.write("Topics discussed:")
+            st.write("Topics:")
             topics_html = "".join(topic_tag(t) for t in topics.split(',') if t.strip() != 'None')
             st.markdown(topics_html if topics_html else "No specific topics identified", unsafe_allow_html=True)
             
