@@ -41,7 +41,7 @@ def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Create the table with the existing schema
+    # Create the table with the existing schema and add the new 'people' and 'topics' columns
     cur.execute('''
         CREATE TABLE IF NOT EXISTS logs
         (id SERIAL PRIMARY KEY,
@@ -50,19 +50,21 @@ def init_db():
          date TEXT,
          time TEXT,
          summary TEXT,
-         emotions TEXT)
+         emotions TEXT,
+         people TEXT,
+         topics TEXT)
     ''')
     conn.commit()
     cur.close()
     conn.close()
 
-def save_to_db(user_email, user_name, summary, emotions):
+def save_to_db(user_email, user_name, summary, emotions, people, topics):
     conn = get_db_connection()
     cur = conn.cursor()
     current_time = datetime.now(timezone).strftime('%H:%M:%S')
     cur.execute(
-        "INSERT INTO logs (user_email, user_name, date, time, summary, emotions) VALUES (%s, %s, %s, %s, %s, %s)",
-        (user_email, user_name, today, current_time, summary, emotions)
+        "INSERT INTO logs (user_email, user_name, date, time, summary, emotions, people, topics) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        (user_email, user_name, today, current_time, summary, emotions, people, topics)
     )
     conn.commit()
     cur.close()
@@ -81,7 +83,7 @@ def get_past_entries(user_email):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
-        "SELECT id, date, time, summary, emotions FROM logs WHERE user_email = %s ORDER BY date DESC, time DESC",
+        "SELECT id, date, time, summary, emotions, people, topics FROM logs WHERE user_email = %s ORDER BY date DESC, time DESC",
         (user_email,)
     )
     entries = cur.fetchall()
@@ -91,12 +93,12 @@ def get_past_entries(user_email):
     # Format the date and time
     formatted_entries = []
     for entry in entries:
-        entry_id, date_str, time_str, summary, emotions = entry
+        entry_id, date_str, time_str, summary, emotions, people, topics = entry
         date_obj = datetime.strptime(date_str, '%Y-%m-%d')
         time_obj = datetime.strptime(time_str, '%H:%M:%S')
         formatted_date = date_obj.strftime('%d %B %Y')
         formatted_time = time_obj.strftime('%I:%M%p').lower()
-        formatted_entries.append((entry_id, formatted_date, formatted_time, summary, emotions))
+        formatted_entries.append((entry_id, formatted_date, formatted_time, summary, emotions, people, topics))
     
     return formatted_entries
 
@@ -138,6 +140,36 @@ def detect_emotions(messages):
     )
     return response.choices[0].message.content
 
+def detect_people(messages):
+    people_prompt = "Analyze the conversation and identify the names of people mentioned. Return only the names of people separated by commas, without any additional text or explanation. If no names are mentioned, return 'None'."
+    people_messages = [
+        {"role": "system", "content": "You are a people detection assistant. Analyze the conversation and return only the names of people mentioned."},
+        {"role": "user", "content": people_prompt},
+    ] + messages
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=people_messages,
+        temperature=0.1,
+        stream=False,
+    )
+    return response.choices[0].message.content
+
+def detect_topics(messages):
+    topics_prompt = "Analyze the conversation and identify the main topics discussed. Return only the topic names separated by commas, without any additional text or explanation. If no specific topics are identified, return 'None'."
+    topics_messages = [
+        {"role": "system", "content": "You are a topic detection assistant. Analyze the conversation and return only the main topics discussed."},
+        {"role": "user", "content": topics_prompt},
+    ] + messages
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=topics_messages,
+        temperature=0.1,
+        stream=False,
+    )
+    return response.choices[0].message.content
+
 def emotion_tag(emotion):
     emotion_colors = {
         "Joy": ("#322E1D", "#FFD700"),  # Gold background, Black text
@@ -148,6 +180,12 @@ def emotion_tag(emotion):
     }
     bg_color, text_color = emotion_colors.get(emotion.strip(), ("#808080", "#FFFFFF"))  # Default to gray bg, white text
     return f'<span style="background-color: {bg_color}; color: {text_color}; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{emotion}</span>'
+
+def people_tag(person):
+    return f'<span style="background-color: #4B0082; color: #FFFFFF; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{person}</span>'
+
+def topic_tag(topic):
+    return f'<span style="background-color: #008080; color: #FFFFFF; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{topic}</span>'
 
 # Initialize database
 init_db()
@@ -211,12 +249,12 @@ with st.sidebar:
         entries = get_past_entries(st.session_state.user_email)
         if entries:
             current_date = None
-            for entry_id, date, time, summary, emotions in entries:
+            for entry_id, date, time, summary, emotions, people, topics in entries:
                 if date != current_date:
                     st.subheader(date)
                     current_date = date
                 if st.button(f"Entry at {time}", key=f"view_{entry_id}"):
-                    st.session_state.selected_entry = (entry_id, date, time, summary, emotions)
+                    st.session_state.selected_entry = (entry_id, date, time, summary, emotions, people, topics)
                     st.session_state.page = "main"  # Ensure the main page is displayed
                     st.rerun()
         else:
@@ -234,7 +272,7 @@ if st.session_state.page == "main":
     if st.session_state.user_email and st.session_state.user_name:
         # Display selected past entry if any
         if 'selected_entry' in st.session_state:
-            entry_id, date, time, summary, emotions = st.session_state.selected_entry
+            entry_id, date, time, summary, emotions, people, topics = st.session_state.selected_entry
             st.header(f"Entry from {date} at {time}")
             st.write(summary)
             
@@ -242,6 +280,16 @@ if st.session_state.page == "main":
             st.write("Emotions:")
             emotion_html = "".join(emotion_tag(e) for e in emotions.split(','))
             st.markdown(emotion_html, unsafe_allow_html=True)
+            
+            # Display people as colored tags
+            st.write("People mentioned:")
+            people_html = "".join(people_tag(p) for p in people.split(',') if p.strip() != 'None')
+            st.markdown(people_html if people_html else "No specific people mentioned", unsafe_allow_html=True)
+            
+            # Display topics as colored tags
+            st.write("Topics discussed:")
+            topics_html = "".join(topic_tag(t) for t in topics.split(',') if t.strip() != 'None')
+            st.markdown(topics_html if topics_html else "No specific topics identified", unsafe_allow_html=True)
             
             col1, col2 = st.columns(2)
             with col1:
@@ -314,19 +362,23 @@ if st.session_state.page == "main":
             if st.session_state.first_response_given and not st.session_state.conversation_ended and not st.session_state.summary_generated:
                 if st.button("Finish Conversation and Log Entry"):
                     st.session_state.conversation_ended = True
-                    with st.spinner("Generating your journal entry summary and detecting emotions..."):
+                    with st.spinner("Generating your journal entry summary, detecting emotions, people, and topics..."):
                         summary = generate_summary(st.session_state.messages)
                         emotions = detect_emotions(st.session_state.messages)
+                        people = detect_people(st.session_state.messages)
+                        topics = detect_topics(st.session_state.messages)
                     
-                    # Save summary and emotions to database
-                    save_to_db(st.session_state.user_email, st.session_state.user_name, summary, emotions)
+                    # Save summary, emotions, people, and topics to database
+                    save_to_db(st.session_state.user_email, st.session_state.user_name, summary, emotions, people, topics)
                     
                     st.session_state.summary = summary
                     st.session_state.emotions = emotions
+                    st.session_state.people = people
+                    st.session_state.topics = topics
                     st.session_state.summary_generated = True
                     st.rerun()  # Force a rerun to update the UI
 
-            # Display summary and emotions if they have been generated
+            # Display summary, emotions, people, and topics if they have been generated
             if st.session_state.summary_generated:
                 st.success("Great job reflecting on your day! Here's your journal entry summary:")
                 st.markdown(st.session_state.summary)
@@ -335,6 +387,16 @@ if st.session_state.page == "main":
                 st.write("Detected emotions:")
                 emotion_html = "".join(emotion_tag(e.strip()) for e in st.session_state.emotions.split(','))
                 st.markdown(emotion_html, unsafe_allow_html=True)
+                
+                # Display people with colored tags
+                st.write("People mentioned:")
+                people_html = "".join(people_tag(p.strip()) for p in st.session_state.people.split(',') if p.strip() != 'None')
+                st.markdown(people_html if people_html else "No specific people mentioned", unsafe_allow_html=True)
+                
+                # Display topics with colored tags
+                st.write("Topics discussed:")
+                topics_html = "".join(topic_tag(t.strip()) for t in st.session_state.topics.split(',') if t.strip() != 'None')
+                st.markdown(topics_html if topics_html else "No specific topics identified", unsafe_allow_html=True)
                 
                 st.info("You can view past journal entries on the left")
 
@@ -363,7 +425,7 @@ elif st.session_state.page == "rag":
     entries = get_past_entries(st.session_state.user_email)
 
     # Combine all entries into a single context string
-    context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}" for _, date, time, summary, _ in entries])
+    context = "\n\n".join([f"Date: {date}, Time: {time}\n{summary}\nEmotions: {emotions}\nPeople: {people}\nTopics: {topics}" for _, date, time, summary, emotions, people, topics in entries])
 
     # Text input for custom or selected question
     user_query = st.text_input("", value=st.session_state.get('selected_question', ''), placeholder="Select a question from below or type your own")
@@ -374,7 +436,9 @@ elif st.session_state.page == "rag":
         "What drains my energy most?",
         "What are some recurring themes from my entries?",
         "What book recommendations do you have based on my entries?",
-        "Count of entries by emotions and give the corresponding dates"
+        "Count of entries by emotions and give the corresponding dates",
+        "Who are the people I mention most often in my entries?",
+        "What are the most common topics I discuss in my journal?"
     ]
 
     # Create buttons for predefined questions
