@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 from openai import OpenAI
-from datetime import datetime, timedelta
+from datetime import datetime
 import psycopg2
 from psycopg2 import sql
 from urllib.parse import urlparse
@@ -41,7 +41,7 @@ def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Create the logs table if it doesn't exist
+    # Create the table if it doesn't exist
     cur.execute('''
         CREATE TABLE IF NOT EXISTS logs
         (id SERIAL PRIMARY KEY,
@@ -54,18 +54,6 @@ def init_db():
          people TEXT,
          topics TEXT)
     ''')
-    
-    # Create the weekly_summaries table
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS weekly_summaries
-        (id SERIAL PRIMARY KEY,
-         user_email TEXT,
-         week_start_date TEXT,
-         week_end_date TEXT,
-         summary TEXT,
-         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
-    ''')
-    
     conn.commit()
     cur.close()
     conn.close()
@@ -199,125 +187,6 @@ def people_tag(person):
 def topic_tag(topic):
     return f'<span style="background-color: #008080; color: #FFFFFF; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{topic}</span>'
 
-# Add these functions after the existing database functions
-
-def get_week_entries(user_email, start_date, end_date):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT date, summary FROM logs WHERE user_email = %s AND date >= %s AND date <= %s ORDER BY date, time",
-        (user_email, start_date, end_date)
-    )
-    entries = cur.fetchall()
-    cur.close()
-    conn.close()
-    return entries
-
-def generate_weekly_summary(entries):
-    # Concatenate all entries for the week
-    concatenated_entries = "\n\n".join([f"Date: {entry[0]}\n{entry[1]}" for entry in entries])
-    
-    # Generate summary using GPT
-    weekly_summary_prompt = "Create a comprehensive weekly summary of the following journal entries. Focus on main themes, emotional patterns, and significant events. Keep it concise but meaningful."
-    
-    messages = [
-        {"role": "system", "content": "You are an AI assistant that creates meaningful weekly summaries from daily journal entries."},
-        {"role": "user", "content": f"{weekly_summary_prompt}\n\nEntries:\n{concatenated_entries}"}
-    ]
-    
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages,
-        temperature=0.1,
-        stream=False,
-    )
-    return response.choices[0].message.content
-
-def save_weekly_summary(user_email, week_start_date, week_end_date, summary):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        """INSERT INTO weekly_summaries (user_email, week_start_date, week_end_date, summary)
-           VALUES (%s, %s, %s, %s)
-           ON CONFLICT (user_email, week_start_date) 
-           DO UPDATE SET summary = EXCLUDED.summary, week_end_date = EXCLUDED.week_end_date""",
-        (user_email, week_start_date, week_end_date, summary)
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
-
-def process_weekly_summaries(user_email):
-    """
-    Process and generate weekly summaries for a user's entries
-    """
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    # Get the earliest and latest dates for the user's entries
-    cur.execute(
-        "SELECT MIN(date), MAX(date) FROM logs WHERE user_email = %s",
-        (user_email,)
-    )
-    date_range = cur.fetchone()
-    cur.close()
-    conn.close()
-    
-    if not date_range[0] or not date_range[1]:
-        return
-    
-    start_date = datetime.strptime(date_range[0], '%Y-%m-%d')
-    end_date = datetime.strptime(date_range[1], '%Y-%m-%d')
-    
-    # Process week by week
-    current_week_start = start_date - timedelta(days=start_date.weekday())
-    while current_week_start <= end_date:
-        current_week_end = current_week_start + timedelta(days=6)
-        
-        # Get entries for the current week
-        entries = get_week_entries(
-            user_email,
-            current_week_start.strftime('%Y-%m-%d'),
-            current_week_end.strftime('%Y-%m-%d')
-        )
-        
-        # Only generate summary if there are entries
-        if entries:
-            weekly_summary = generate_weekly_summary(entries)
-            save_weekly_summary(
-                user_email,
-                current_week_start.strftime('%Y-%m-%d'),
-                current_week_end.strftime('%Y-%m-%d'),
-                weekly_summary
-            )
-        
-        current_week_start += timedelta(days=7)
-
-def get_weekly_summaries(user_email):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        """SELECT week_start_date, week_end_date, summary 
-           FROM weekly_summaries 
-           WHERE user_email = %s 
-           ORDER BY week_start_date DESC""",
-        (user_email,)
-    )
-    summaries = cur.fetchall()
-    cur.close()
-    conn.close()
-    
-    # Format the dates
-    formatted_summaries = []
-    for week_start, week_end, summary in summaries:
-        start_obj = datetime.strptime(week_start, '%Y-%m-%d')
-        end_obj = datetime.strptime(week_end, '%Y-%m-%d')
-        formatted_start = start_obj.strftime('%d %B %Y')
-        formatted_end = end_obj.strftime('%d %B %Y')
-        formatted_summaries.append((formatted_start, formatted_end, summary))
-    
-    return formatted_summaries
-
 # Initialize database
 init_db()
 
@@ -370,13 +239,8 @@ with st.sidebar:
             st.session_state.page = "rag"
             st.rerun()
         
-        # Add button to view weekly summaries
-        if st.button("View Weekly Summaries", key="weekly_summaries_button", type="primary"):
-            st.session_state.page = "weekly_summaries"
-            st.rerun()
-        
         # New button for Mindfulness Podcasts
-        podcast_url = "https://midi-zydeco-b0b.notion.site/Mindfulness-Podcasts-109bc7bdae64493dc5c8"
+        podcast_url = "https://midi-zydeco-b0b.notion.site/Mindfulness-Podcasts-109bc7bdae64802a89e5dee7493dc5c8"
         st.markdown(f'<a href="{podcast_url}" target="_blank"><button style="background-color:#FF4B4B;color:white;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;">Mindfulness Podcasts</button></a>', unsafe_allow_html=True)
         
         # Only show past entries after user has logged in
@@ -505,7 +369,6 @@ if st.session_state.page == "main":
                     
                     # Save summary, emotions, people, and topics to database
                     save_to_db(st.session_state.user_email, st.session_state.user_name, summary, emotions, people, topics)
-                    process_weekly_summaries(st.session_state.user_email)
                     
                     st.session_state.summary = summary
                     st.session_state.emotions = emotions
@@ -571,7 +434,6 @@ elif st.session_state.page == "rag":
         "What are some recurring topics from my entries?",
         "What book recommendations do you have based on my entries?",
         "Count of entries by emotions and give the corresponding dates",
-
     ]
 
     # Create buttons for predefined questions
@@ -603,26 +465,3 @@ elif st.session_state.page == "rag":
     if st.session_state.page != "rag":
         if 'selected_question' in st.session_state:
             del st.session_state.selected_question
-
-elif st.session_state.page == "weekly_summaries":
-    st.title("Weekly Reflection Summaries")
-
-    if st.session_state.user_email is None:
-        st.warning("Please log in first.")
-        st.session_state.page = "main"
-        st.rerun()
-
-    # Get weekly summaries
-    summaries = get_weekly_summaries(st.session_state.user_email)
-
-    if not summaries:
-        st.info("No weekly summaries available yet. Keep journaling regularly to see your weekly patterns!")
-    else:
-        for week_start, week_end, summary in summaries:
-            with st.expander(f"Week of {week_start} to {week_end}"):
-                st.write(summary)
-
-    # Add a button to return to main page
-    if st.button("Back to Journal"):
-        st.session_state.page = "main"
-        st.rerun()
