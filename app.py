@@ -318,7 +318,9 @@ with st.sidebar:
         
         # Add "Share Feedback" link at the bottom of the sidebar
         st.markdown("---")
-        feedback_url = "https://i0cphmhv362.typeform.com/to/gL3M2OdT"  # Replace with your actual feedback URL
+        refresh_url = "https://mydailyjournal.xyz/"
+        st.markdown(f'<div style="text-align: center;"><a href="{refresh_url}" target="_blank">Logout</a></div>', unsafe_allow_html=True)
+        feedback_url = "https://i0cphmhv362.typeform.com/to/gL3M2OdT"
         st.markdown(f'<div style="text-align: center;"><a href="{feedback_url}" target="_blank">Share Feedback</a></div>', unsafe_allow_html=True)
 
 # Main area for new entries and displaying selected past entry
