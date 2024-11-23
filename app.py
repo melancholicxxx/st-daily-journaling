@@ -245,7 +245,7 @@ if "page" not in st.session_state:
 
 # Sidebar for user info and past entries
 with st.sidebar:
-    st.title("Login or Sign Up")
+    st.title("Daily Reflection Journal")
     
     if st.session_state.user_email is None or st.session_state.user_name is None:
         tab1, tab2 = st.tabs(["Login", "Register"])
