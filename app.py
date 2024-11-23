@@ -8,6 +8,8 @@ from urllib.parse import urlparse
 import pytz
 import streamlit.components.v1 as components
 from st_supabase_connection import SupabaseConnection, execute_query
+from streamlit_cookies_controller import CookieController
+import time
 
 # Set page config at the very beginning
 st.set_page_config(layout="wide")
@@ -219,10 +221,41 @@ def login_user(email, password):
             "email": email,
             "password": password
         })
+        if response:
+            persist_login(response.user)
+            time.sleep(0.5)
+            st.rerun()
         return response
     except Exception as e:
         st.error(f"Login failed: {str(e)}")
         return None
+
+# Initialize the cookies controller
+cookie_controller = CookieController()
+
+def persist_login(user_data):
+    """Persist login data in cookies and session state"""
+    cookie_controller.set("user_email", user_data.email)
+    cookie_controller.set("user_name", user_data.user_metadata.get('name', ''))
+    st.session_state.user_email = user_data.email
+    st.session_state.user_name = user_data.user_metadata.get('name', '')
+
+def clear_login():
+    """Clear login data from cookies and session state"""
+    cookie_controller.set("user_email", "", max_age=0)
+    cookie_controller.set("user_name", "", max_age=0)
+    st.session_state.user_email = None
+    st.session_state.user_name = None
+
+def check_login_session():
+    """Check if user is logged in via cookies"""
+    user_email = cookie_controller.get("user_email")
+    user_name = cookie_controller.get("user_name")
+    if user_email and user_name:
+        st.session_state.user_email = user_email
+        st.session_state.user_name = user_name
+        return True
+    return False
 
 # Initialize database
 init_db()
@@ -242,6 +275,9 @@ if "summary_generated" not in st.session_state:
     st.session_state.summary_generated = False
 if "page" not in st.session_state:
     st.session_state.page = "main"
+
+# Check for existing login session
+check_login_session()
 
 # Sidebar for user info and past entries
 with st.sidebar:    
