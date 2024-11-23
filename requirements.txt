@@ -8,4 +8,4 @@ llvmlite
 pytz
 numpy
 st-supabase-connection
-streamlit-cookies-controller==0.1.2
+streamlit-cookies-controller
