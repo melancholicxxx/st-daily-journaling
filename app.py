@@ -316,7 +316,7 @@ with st.sidebar:
         else:
             st.info("No past entries found.")
         
-        # Add "Share Feedback" link at the bottom of the sidebar
+        # Add "Share Feedback" and "Logout" link at the bottom of the sidebar
         st.markdown("---")
         refresh_url = "https://mydailyjournal.xyz/"
         st.markdown(f'<div style="text-align: center;"><a href="{refresh_url}" target="_blank">Logout</a></div>', unsafe_allow_html=True)
