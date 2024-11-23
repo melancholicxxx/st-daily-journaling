@@ -7,3 +7,4 @@ numba
 llvmlite
 pytz
 numpy
+st-supabase-connection

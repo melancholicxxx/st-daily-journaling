@@ -7,6 +7,7 @@ from psycopg2 import sql
 from urllib.parse import urlparse
 import pytz
 import streamlit.components.v1 as components
+from st_supabase_connection import SupabaseConnection, execute_query
 
 # Set page config at the very beginning
 st.set_page_config(layout="wide")
@@ -15,6 +16,14 @@ st.set_page_config(layout="wide")
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 timezone = pytz.timezone('Asia/Singapore')  # GMT+8
 today = datetime.now(timezone).strftime('%Y-%m-%d')
+
+st_supabase = st.connection(
+    name="supabase",
+    type=SupabaseConnection,
+    ttl=None,
+    url=os.environ["SUPABASE_URL"],
+    key=os.environ["SUPABASE_KEY"]
+)
 
 # Database setup and functions
 def get_db_connection():
@@ -187,6 +196,34 @@ def people_tag(person):
 def topic_tag(topic):
     return f'<span style="background-color: #008080; color: #FFFFFF; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{topic}</span>'
 
+# Add these functions for auth management
+def register_user(email, password, name):
+    try:
+        response = st_supabase.auth.sign_up({
+            "email": email,
+            "password": password,
+            "options": {
+                "data": {
+                    "name": name
+                }
+            }
+        })
+        return response
+    except Exception as e:
+        st.error(f"Registration failed: {str(e)}")
+        return None
+
+def login_user(email, password):
+    try:
+        response = st_supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+        return response
+    except Exception as e:
+        st.error(f"Login failed: {str(e)}")
+        return None
+
 # Initialize database
 init_db()
 
@@ -208,15 +245,35 @@ if "page" not in st.session_state:
 
 # Sidebar for user info and past entries
 with st.sidebar:
-    st.title("Journal Dashboard")
+    st.title("Login or Sign Up")
     
     if st.session_state.user_email is None or st.session_state.user_name is None:
-        user_email = st.text_input("What's your email?")
-        user_name = st.text_input("What's your name?")
-        if user_email and user_name:
-            st.session_state.user_email = user_email
-            st.session_state.user_name = user_name
-            st.rerun()
+        tab1, tab2 = st.tabs(["Login", "Register"])
+        
+        with tab1:
+            login_email = st.text_input("Email", key="login_email")
+            login_password = st.text_input("Password", type="password", key="login_password")
+            
+            if st.button("Login", key="login_button"):
+                if login_email and login_password:
+                    response = login_user(login_email, login_password)
+                    if response:
+                        user_data = response.user
+                        st.session_state.user_email = user_data.email
+                        st.session_state.user_name = user_data.user_metadata.get('name', '')
+                        st.rerun()
+        
+        with tab2:
+            reg_email = st.text_input("Email", key="reg_email")
+            reg_name = st.text_input("Name", key="reg_name")
+            reg_password = st.text_input("Password", type="password", key="reg_password")
+            
+            if st.button("Register", key="register_button"):
+                if reg_email and reg_name and reg_password:
+                    response = register_user(reg_email, reg_password, reg_name)
+                    if response:
+                        st.success("Registration successful! Please login.")
+                        st.rerun()
     else:
         entries_count = get_entries_count(st.session_state.user_email)
         st.markdown(f"Welcome back, {st.session_state.user_name}! You've created **{entries_count}** entries so far. Continue on the path!")
