@@ -308,7 +308,7 @@ with st.sidebar:
                 if reg_email and reg_name and reg_password:
                     response = register_user(reg_email, reg_password, reg_name)
                     if response:
-                        st.success("Registration successful! Please login.")
+                        st.success("Check your email for verification.")
                         st.rerun()
     else:
         entries_count = get_entries_count(st.session_state.user_email)
@@ -337,24 +337,12 @@ with st.sidebar:
         podcast_url = "https://midi-zydeco-b0b.notion.site/Mindfulness-Podcasts-109bc7bdae64802a89e5dee7493dc5c8"
         st.markdown(f'<a href="{podcast_url}" target="_blank"><button style="background-color:#FF4B4B;color:white;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;">Mindfulness Podcasts</button></a>', unsafe_allow_html=True)
         
-        # Only show past entries after user has logged in
-        st.header("Past Entries")
-        entries = get_past_entries(st.session_state.user_email)
-        if entries:
-            current_date = None
-            for entry_id, date, time, summary, emotions, people, topics in entries:
-                if date != current_date:
-                    st.subheader(date)
-                    current_date = date
-                if st.button(f"Entry at {time}", key=f"view_{entry_id}"):
-                    st.session_state.selected_entry = (entry_id, date, time, summary, emotions, people, topics)
-                    st.session_state.page = "main"  # Ensure the main page is displayed
-                    st.rerun()
-        else:
-            st.info("No past entries found.")
+        # Add Past Journal Entries button
+        if st.button("Past Journal Entries", key="past_entries_button", type="primary"):
+            st.session_state.page = "past_entries"
+            st.rerun()
         
         # Add "Share Feedback" and "Logout" link at the bottom of the sidebar
-        st.markdown("---")
         if st.button("Logout"):
             # Sign out from Supabase
             st_supabase.auth.sign_out()
@@ -568,3 +556,51 @@ elif st.session_state.page == "rag":
     if st.session_state.page != "rag":
         if 'selected_question' in st.session_state:
             del st.session_state.selected_question
+
+# Add new elif condition for past_entries page after the RAG page condition
+elif st.session_state.page == "past_entries":
+    st.title("Past Journal Entries")
+    
+    if st.session_state.user_email is None:
+        st.warning("Please log in first.")
+        st.session_state.page = "main"
+        st.rerun()
+    
+    entries = get_past_entries(st.session_state.user_email)
+    if entries:
+        current_date = None
+        for entry_id, date, time, summary, emotions, people, topics in entries:
+            if date != current_date:
+                st.header(date)
+                current_date = date
+            
+            with st.expander(f"Entry at {time}"):
+                st.write(summary)
+                
+                # Display emotions as colored tags
+                st.write("Emotions:")
+                emotion_html = "".join(emotion_tag(e) for e in emotions.split(','))
+                st.markdown(emotion_html, unsafe_allow_html=True)
+                
+                # Display people as colored tags
+                st.write("People:")
+                people_html = "".join(people_tag(p) for p in people.split(',') if p.strip() != 'None')
+                st.markdown(people_html if people_html else "No specific people mentioned", unsafe_allow_html=True)
+                
+                # Display topics as colored tags
+                st.write("Topics:")
+                topics_html = "".join(topic_tag(t) for t in topics.split(',') if t.strip() != 'None')
+                st.markdown(topics_html if topics_html else "No specific topics identified", unsafe_allow_html=True)
+                
+                # Delete button for each entry
+                if st.button("Delete Entry", key=f"delete_{entry_id}"):
+                    delete_entry(entry_id)
+                    st.success("Entry deleted successfully!")
+                    st.rerun()
+    else:
+        st.info("No past entries found.")
+    
+    # Button to return to main page
+    if st.button("Back to Journal"):
+        st.session_state.page = "main"
+        st.rerun()
