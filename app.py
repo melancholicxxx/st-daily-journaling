@@ -10,6 +10,7 @@ import streamlit.components.v1 as components
 from st_supabase_connection import SupabaseConnection, execute_query
 from streamlit_cookies_controller import CookieController
 import time
+from pathlib import Path
 
 # Set page config at the very beginning
 st.set_page_config(layout="wide")
@@ -226,6 +227,29 @@ def check_login_session():
         return True
     return False
 
+def handle_auth_callback():
+    """Handle the OAuth callback and session"""
+    try:
+        session = st_supabase.auth.get_session()
+        if session and session.user:
+            # Store the session in session state
+            st.session_state.auth_success = session
+            persist_login(session.user)
+            return True
+            
+        # Listen for auth state changes
+        def on_auth_state_change(event, session):
+            if session:
+                st.session_state.auth_success = session
+                persist_login(session.user)
+                st.rerun()
+        
+        st_supabase.auth.on_auth_state_change(on_auth_state_change)
+        
+    except Exception as e:
+        st.error(f"Authentication error: {str(e)}")
+    return False
+
 # Initialize database
 init_db()
 
@@ -248,27 +272,98 @@ if "page" not in st.session_state:
 # Check for existing login session
 check_login_session()
 
+# Check for auth callback
+if not st.session_state.user_email:
+    handle_auth_callback()
+
+# Add these imports at the top
+from pathlib import Path
+import streamlit.components.v1 as components
+
+# Add this function to handle the Auth UI
+def load_auth_component():
+    """Load the Supabase Auth UI component"""
+    # Get the directory of the current file
+    current_dir = Path(__file__).parent
+    
+    # Create components directory if it doesn't exist
+    components_dir = current_dir / "components"
+    components_dir.mkdir(exist_ok=True)
+    
+    # Create the auth component HTML file
+    auth_component = components_dir / "auth.html"
+    auth_html = f"""
+    <div id="auth-container"></div>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        const supabase = supabase.createClient(
+            '{os.environ["SUPABASE_URL"]}',
+            '{os.environ["SUPABASE_KEY"]}'
+        )
+        
+        // Initialize the auth UI
+        async function initAuth() {{
+            const auth = document.getElementById('auth-container')
+            const {{data: {{session}}}} = await supabase.auth.getSession()
+            
+            if (session) {{
+                // Send message to Streamlit
+                window.parent.postMessage({{
+                    type: 'auth_success',
+                    session: session
+                }}, '*')
+            }}
+            
+            // Set up auth state change listener
+            supabase.auth.onAuthStateChange((event, session) => {{
+                if (session) {{
+                    window.parent.postMessage({{
+                        type: 'auth_success',
+                        session: session
+                    }}, '*')
+                }}
+            }})
+            
+            // Initialize Auth UI
+            const {{error}} = await supabase.auth.signInWithOAuth({{
+                provider: 'google',
+                options: {{
+                    redirectTo: window.location.origin
+                }}
+            }})
+        }}
+        
+        initAuth()
+    </script>
+    """
+    
+    with auth_component.open('w') as f:
+        f.write(auth_html)
+    
+    return components.html(auth_html, height=400)
+
 # Sidebar for user info and past entries
 with st.sidebar:    
     if st.session_state.user_email is None or st.session_state.user_name is None:
         st.title("Welcome to Daily Journal")
         
-        # Replace the login/register tabs with a single OAuth button
-        if st.button("Sign in with Google", type="primary"):
-            try:
-                response = st_supabase.auth.sign_in_with_oauth({
-                    "provider": 'google',
-                    "options": {
-                        "redirectTo": "https://mydailyjournal.xyz"
-                    }
-                })
-                if response:
-                    # The OAuth flow will handle the redirect and callback
-                    user_data = response.user
-                    persist_login(user_data)
-                    st.rerun()
-            except Exception as e:
-                st.error(f"Sign in failed: {str(e)}")
+        # Load the Auth UI component
+        load_auth_component()
+        
+        # Add helper text
+        st.markdown("""
+        Sign in with your Google account to:
+        - Create daily journal entries
+        - Track your emotions and growth
+        - Review past reflections
+        """)
+        
+        # Handle auth messages from the component
+        if 'auth_success' in st.session_state:
+            session = st.session_state.auth_success
+            user = session['user']
+            persist_login(user)
+            st.rerun()
     else:
         entries_count = get_entries_count(st.session_state.user_email)
         st.title("Dashboard")
