@@ -333,10 +333,6 @@ with st.sidebar:
             st.session_state.page = "rag"
             st.rerun()
         
-        # New button for Mindfulness Podcasts
-        podcast_url = "https://midi-zydeco-b0b.notion.site/Mindfulness-Podcasts-109bc7bdae64802a89e5dee7493dc5c8"
-        st.markdown(f'<a href="{podcast_url}" target="_blank"><button style="background-color:#FF4B4B;color:white;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;">Mindfulness Podcasts</button></a>', unsafe_allow_html=True)
-        
         # Add Past Journal Entries button
         if st.button("Past Journal Entries", key="past_entries_button", type="primary"):
             st.session_state.page = "past_entries"
@@ -350,6 +346,11 @@ with st.sidebar:
             clear_login()
             # Rerun the app to refresh the state
             st.rerun()
+
+        #Mindfulness Podcasts link
+        st.markdown("---")
+        podcast_url = "https://midi-zydeco-b0b.notion.site/Mindfulness-Podcasts-109bc7bdae64802a89e5dee7493dc5c8"
+        st.markdown(f'<div style="text-align: center;"><a href="{podcast_url}" target="_blank">Mindfulness Podcasts</a></div>', unsafe_allow_html=True)
         
         # Keep the feedback link
         feedback_url = "https://i0cphmhv362.typeform.com/to/gL3M2OdT"
