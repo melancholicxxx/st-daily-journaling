@@ -235,12 +235,23 @@ def reset_password(email):
         response = st_supabase.auth.reset_password_for_email(
             email,
             {
-                "redirectTo": "https://mydailyjournal.xyz"
+                "redirectTo": "https://mydailyjournal.xyz/update-password"
             }
         )
         return True
     except Exception as e:
         st.error(f"Password reset failed: {str(e)}")
+        return False
+
+# Add this new function with the other auth management functions
+def update_user_password(new_password):
+    try:
+        response = st_supabase.auth.update_user({
+            "password": new_password
+        })
+        return True
+    except Exception as e:
+        st.error(f"Password update failed: {str(e)}")
         return False
 
 #NEW
@@ -292,6 +303,11 @@ if "page" not in st.session_state:
 
 # Check for existing login session
 check_login_session()
+
+# Check for password reset token in URL
+query_params = st.experimental_get_query_params()
+if 'type' in query_params and query_params['type'][0] == 'recovery':
+    st.session_state.page = "update_password"
 
 # Sidebar for user info and past entries
 with st.sidebar:    
@@ -637,10 +653,38 @@ elif st.session_state.page == "reset_password":
                 if reset_password(email):
                     st.success("Password reset email sent! Please check your inbox.")
                     time.sleep(3)
-                    st.session_state.page = "main"
+                    st.session_state.page = "update_password"
                     st.rerun()
             else:
                 st.error("Please enter your email address.")
+    
+    with col2:
+        if st.button("Back to Login"):
+            st.session_state.page = "main"
+            st.rerun()
+
+# Add this new page condition after the reset_password page
+elif st.session_state.page == "update_password":
+    st.title("Set New Password")
+    
+    new_password = st.text_input("New Password", type="password")
+    confirm_password = st.text_input("Confirm Password", type="password")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Update Password"):
+            if not new_password or not confirm_password:
+                st.error("Please fill in both password fields.")
+            elif new_password != confirm_password:
+                st.error("Passwords do not match.")
+            elif len(new_password) < 6:
+                st.error("Password must be at least 6 characters long.")
+            else:
+                if update_user_password(new_password):
+                    st.success("Password updated successfully!")
+                    time.sleep(3)
+                    st.session_state.page = "main"
+                    st.rerun()
     
     with col2:
         if st.button("Back to Login"):
