@@ -305,8 +305,7 @@ if "page" not in st.session_state:
 check_login_session()
 
 # Check for password reset token in URL
-query_params = st.experimental_get_query_params()
-if 'type' in query_params and query_params['type'][0] == 'recovery':
+if 'type' in st.query_params and st.query_params['type'] == 'recovery':
     st.session_state.page = "update_password"
 
 # Sidebar for user info and past entries
