@@ -237,18 +237,24 @@ cookie_controller = CookieController()
 def persist_login(user_data):
     """Persist login data in cookies and session state"""
     cookie_controller.set("user_email", user_data.email)
+    cookie_controller.set("user_name", user_data.user_metadata.get('name', ''))
     st.session_state.user_email = user_data.email
+    st.session_state.user_name = user_data.user_metadata.get('name', '')
 
 def clear_login():
     """Clear login data from cookies and session state"""
     cookie_controller.set("user_email", "", max_age=0)
+    cookie_controller.set("user_name", "", max_age=0)
     st.session_state.user_email = None
+    st.session_state.user_name = None
 
 def check_login_session():
     """Check if user is logged in via cookies"""
     user_email = cookie_controller.get("user_email")
-    if user_email:
+    user_name = cookie_controller.get("user_name")
+    if user_email and user_name:
         st.session_state.user_email = user_email
+        st.session_state.user_name = user_name
         return True
     return False
 
