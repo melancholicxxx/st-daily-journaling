@@ -27,6 +27,16 @@ st_supabase = st.connection(
     key=os.environ["SUPABASE_KEY"]
 )
 
+# Add this near the start of your app, after initializing st_supabase
+def get_current_user():
+    try:
+        user = st_supabase.auth.get_user()
+        if user:
+            return user.user
+    except Exception:
+        return None
+    return None
+
 # Database setup and functions
 def get_db_connection():
     db_url = os.environ['DATABASE_URL']
@@ -253,20 +263,24 @@ with st.sidebar:
     if st.session_state.user_email is None or st.session_state.user_name is None:
         st.title("Welcome to Daily Journal")
         
+        # Check if we have a logged-in user
+        user = get_current_user()
+        if user:
+            persist_login(user)
+            st.rerun()
+        
         # Replace the login/register tabs with a single OAuth button
         if st.button("Sign in with Google", type="primary"):
             try:
-                response = st_supabase.auth.sign_in_with_oauth({
+                auth_url = st_supabase.auth.sign_in_with_oauth({
                     "provider": 'google',
                     "options": {
                         "redirectTo": "https://mydailyjournal.xyz"
                     }
                 })
-                if response:
-                    # The OAuth flow will handle the redirect and callback
-                    user_data = response.user
-                    persist_login(user_data)
-                    st.rerun()
+                # Get the auth URL from the response and redirect
+                if auth_url.url:
+                    st.markdown(f'<meta http-equiv="refresh" content="0;url={auth_url.url}">', unsafe_allow_html=True)
             except Exception as e:
                 st.error(f"Sign in failed: {str(e)}")
     else:
