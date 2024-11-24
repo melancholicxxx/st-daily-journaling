@@ -230,19 +230,6 @@ def login_user(email, password):
         st.error(f"Login failed: {str(e)}")
         return None
 
-def reset_password(email):
-    try:
-        response = st_supabase.auth.reset_password_for_email(
-            email,
-            {
-                "redirectTo": "https://mydailyjournal.xyz"
-            }
-        )
-        return True
-    except Exception as e:
-        st.error(f"Password reset failed: {str(e)}")
-        return False
-
 #NEW
 # Initialize the cookies controller
 cookie_controller = CookieController()
@@ -311,10 +298,6 @@ with st.sidebar:
                         st.session_state.user_email = user_data.email
                         st.session_state.user_name = user_data.user_metadata.get('name', '')
                         st.rerun()
-            
-            if st.button("Forgot Password?"):
-                st.session_state.page = "reset_password"
-                st.rerun()
         
         with tab2:
             reg_email = st.text_input("Email", key="reg_email")
@@ -623,26 +606,3 @@ elif st.session_state.page == "past_entries":
     if st.button("Back to Journal"):
         st.session_state.page = "main"
         st.rerun()
-
-# Add this new elif condition for the reset password page after the main page condition
-elif st.session_state.page == "reset_password":
-    st.title("Reset Password")
-    
-    email = st.text_input("Enter your email address")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Send Reset Link"):
-            if email:
-                if reset_password(email):
-                    st.success("Password reset email sent! Please check your inbox.")
-                    time.sleep(3)
-                    st.session_state.page = "main"
-                    st.rerun()
-            else:
-                st.error("Please enter your email address.")
-    
-    with col2:
-        if st.button("Back to Login"):
-            st.session_state.page = "main"
-            st.rerun()
