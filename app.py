@@ -355,8 +355,15 @@ with st.sidebar:
         
         # Add "Share Feedback" and "Logout" link at the bottom of the sidebar
         st.markdown("---")
-        refresh_url = "https://mydailyjournal.xyz/"
-        st.markdown(f'<div style="text-align: center;"><a href="{refresh_url}" target="_blank">Logout</a></div>', unsafe_allow_html=True)
+        if st.button("Logout"):
+            # Sign out from Supabase
+            st_supabase.auth.sign_out()
+            # Clear local session data
+            clear_login()
+            # Rerun the app to refresh the state
+            st.rerun()
+        
+        # Keep the feedback link
         feedback_url = "https://i0cphmhv362.typeform.com/to/gL3M2OdT"
         st.markdown(f'<div style="text-align: center;"><a href="{feedback_url}" target="_blank">Share Feedback</a></div>', unsafe_allow_html=True)
 
