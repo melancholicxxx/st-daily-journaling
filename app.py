@@ -309,7 +309,7 @@ with st.sidebar:
                     response = register_user(reg_email, reg_password, reg_name)
                     if response:
                         st.success("Check your email for verification.")
-                        time.sleep(5)
+                        time.sleep(10)
                         st.rerun()
     else:
         entries_count = get_entries_count(st.session_state.user_email)
