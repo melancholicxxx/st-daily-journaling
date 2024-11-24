@@ -198,6 +198,51 @@ def people_tag(person):
 def topic_tag(topic):
     return f'<span style="background-color: #008080; color: #FFFFFF; padding: 2px 6px; border-radius: 3px; margin-right: 5px;">{topic}</span>'
 
+# Add these functions for auth management
+def register_user(email, password, name):
+    try:
+        response = st_supabase.auth.sign_up({
+            "email": email,
+            "password": password,
+            "options": {
+                "data": {
+                    "name": name
+                }
+            }
+        })
+        return response
+    except Exception as e:
+        st.error(f"Registration failed: {str(e)}")
+        return None
+
+def login_user(email, password):
+    try:
+        response = st_supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+        if response:
+            persist_login(response.user)
+            time.sleep(0.5)
+            st.rerun()
+        return response
+    except Exception as e:
+        st.error(f"Login failed: {str(e)}")
+        return None
+
+def reset_password(email):
+    try:
+        response = st_supabase.auth.reset_password_for_email(
+            email,
+            {
+                "redirectTo": "https://mydailyjournal.xyz"
+            }
+        )
+        return True
+    except Exception as e:
+        st.error(f"Password reset failed: {str(e)}")
+        return False
+
 #NEW
 # Initialize the cookies controller
 cookie_controller = CookieController()
@@ -251,24 +296,38 @@ check_login_session()
 # Sidebar for user info and past entries
 with st.sidebar:    
     if st.session_state.user_email is None or st.session_state.user_name is None:
-        st.title("Welcome to Daily Journal")
+        st.title("Login or Register")
+        tab1, tab2 = st.tabs(["Login", "Register"])
         
-        # Replace the login/register tabs with a single OAuth button
-        if st.button("Sign in with Google", type="primary"):
-            try:
-                response = st_supabase.auth.sign_in_with_oauth({
-                    "provider": 'google',
-                    "options": {
-                        "redirectTo": "https://mydailyjournal.xyz"
-                    }
-                })
-                if response:
-                    # The OAuth flow will handle the redirect and callback
-                    user_data = response.user
-                    persist_login(user_data)
-                    st.rerun()
-            except Exception as e:
-                st.error(f"Sign in failed: {str(e)}")
+        with tab1:
+            login_email = st.text_input("Email", key="login_email")
+            login_password = st.text_input("Password", type="password", key="login_password")
+            
+            if st.button("Login", key="login_button"):
+                if login_email and login_password:
+                    response = login_user(login_email, login_password)
+                    if response:
+                        user_data = response.user
+                        st.session_state.user_email = user_data.email
+                        st.session_state.user_name = user_data.user_metadata.get('name', '')
+                        st.rerun()
+            
+            if st.button("Forgot Password?"):
+                st.session_state.page = "reset_password"
+                st.rerun()
+        
+        with tab2:
+            reg_email = st.text_input("Email", key="reg_email")
+            reg_name = st.text_input("Name", key="reg_name")
+            reg_password = st.text_input("Password", type="password", key="reg_password")
+            
+            if st.button("Register", key="register_button"):
+                if reg_email and reg_name and reg_password:
+                    response = register_user(reg_email, reg_password, reg_name)
+                    if response:
+                        st.success("Check your email for verification.")
+                        time.sleep(10)
+                        st.rerun()
     else:
         entries_count = get_entries_count(st.session_state.user_email)
         st.title("Dashboard")
@@ -564,3 +623,26 @@ elif st.session_state.page == "past_entries":
     if st.button("Back to Journal"):
         st.session_state.page = "main"
         st.rerun()
+
+# Add this new elif condition for the reset password page after the main page condition
+elif st.session_state.page == "reset_password":
+    st.title("Reset Password")
+    
+    email = st.text_input("Enter your email address")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Send Reset Link"):
+            if email:
+                if reset_password(email):
+                    st.success("Password reset email sent! Please check your inbox.")
+                    time.sleep(3)
+                    st.session_state.page = "main"
+                    st.rerun()
+            else:
+                st.error("Please enter your email address.")
+    
+    with col2:
+        if st.button("Back to Login"):
+            st.session_state.page = "main"
+            st.rerun()
