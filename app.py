@@ -230,7 +230,6 @@ def login_user(email, password):
         st.error(f"Login failed: {str(e)}")
         return None
 
-#NEW
 # Initialize the cookies controller
 cookie_controller = CookieController()
 
@@ -298,6 +297,9 @@ with st.sidebar:
                         st.session_state.user_email = user_data.email
                         st.session_state.user_name = user_data.user_metadata.get('name', '')
                         st.rerun()
+            
+            # Add contact support email link
+            st.markdown('<div style="text-align: center;"><a href="mailto:support@mydailyjournal.xyz">Contact Support</a></div>', unsafe_allow_html=True)
         
         with tab2:
             reg_email = st.text_input("Email", key="reg_email")
@@ -362,144 +364,104 @@ if st.session_state.page == "main":
     st.title("Daily Reflection Journal")
 
     if st.session_state.user_email and st.session_state.user_name:
-        # Display selected past entry if any
-        if 'selected_entry' in st.session_state:
-            entry_id, date, time, summary, emotions, people, topics = st.session_state.selected_entry
-            st.header(f"Entry from {date} at {time}")
-            st.write(summary)
+        st.subheader("Share your reflections for today 🧘🏻")
+        
+        # Display chat messages
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        # Chat input
+        if not st.session_state.conversation_ended and (prompt := st.chat_input("How are you feeling right now?")):
+            # Set first_response_given to True
+            st.session_state.first_response_given = True
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            # Prepare messages for API call
+            system_message = f"You are a close confidante. Your friend, {st.session_state.user_name}, will tell you how they are feeling and what's on their mind. Listen intently, prompt them to open up and share more about their thoughts and feelings without judgement. Be a friendly, supportive presence, and give a neutral, safe and comfortable tone. Compliment and encourage your friend as much as possible."
             
-            # Display emotions as colored tags
-            st.write("Emotions:")
-            emotion_html = "".join(emotion_tag(e) for e in emotions.split(','))
+            messages = [
+                {"role": "system", "content": system_message},
+            ] + [
+                {"role": msg["role"], "content": msg["content"]}
+                for msg in st.session_state.messages
+            ]
+
+            # Create a placeholder for the assistant's response
+            with st.chat_message("assistant"):
+                message_placeholder = st.empty()
+                full_response = ""
+
+            # Stream the response
+            for chunk in client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.1,
+                stream=True,
+            ):
+                if chunk.choices[0].delta.content is not None:
+                    full_response += chunk.choices[0].delta.content
+                    message_placeholder.markdown(full_response + "▌")
+            
+            # Remove the blinking cursor
+            message_placeholder.markdown(full_response)
+
+            # Add assistant message to chat history
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+        # End Conversation and Log Journal Entry button
+        if st.session_state.first_response_given and not st.session_state.conversation_ended and not st.session_state.summary_generated:
+            if st.button("Finish Conversation and Log Entry"):
+                st.session_state.conversation_ended = True
+                with st.spinner("Generating your journal entry summary, detecting emotions, people, and topics..."):
+                    summary = generate_summary(st.session_state.messages)
+                    emotions = detect_emotions(st.session_state.messages)
+                    people = detect_people(st.session_state.messages)
+                    topics = detect_topics(st.session_state.messages)
+                
+                # Save summary, emotions, people, and topics to database
+                save_to_db(st.session_state.user_email, st.session_state.user_name, summary, emotions, people, topics)
+                
+                st.session_state.summary = summary
+                st.session_state.emotions = emotions
+                st.session_state.people = people
+                st.session_state.topics = topics
+                st.session_state.summary_generated = True
+                st.rerun()  # Force a rerun to update the UI
+
+        # Display summary, emotions, people, and topics if they have been generated
+        if st.session_state.summary_generated:
+            st.success("Great job reflecting on your day! Here's your journal entry summary:")
+            st.markdown(st.session_state.summary)
+            
+            # Display emotions with colored tags
+            st.write("Detected emotions:")
+            emotion_html = "".join(emotion_tag(e.strip()) for e in st.session_state.emotions.split(','))
             st.markdown(emotion_html, unsafe_allow_html=True)
             
-            # Display people as colored tags
-            st.write("People:")
-            people_html = "".join(people_tag(p) for p in people.split(',') if p.strip() != 'None')
+            # Display people with colored tags
+            st.write("People mentioned:")
+            people_html = "".join(people_tag(p.strip()) for p in st.session_state.people.split(',') if p.strip() != 'None')
             st.markdown(people_html if people_html else "No specific people mentioned", unsafe_allow_html=True)
             
-            # Display topics as colored tags
-            st.write("Topics:")
-            topics_html = "".join(topic_tag(t) for t in topics.split(',') if t.strip() != 'None')
+            # Display topics with colored tags
+            st.write("Topics discussed:")
+            topics_html = "".join(topic_tag(t.strip()) for t in st.session_state.topics.split(',') if t.strip() != 'None')
             st.markdown(topics_html if topics_html else "No specific topics identified", unsafe_allow_html=True)
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Create New Entry"):
-                    del st.session_state.selected_entry
-                    st.session_state.conversation_ended = False
-                    st.session_state.messages = []
-                    st.session_state.first_response_given = False
-                    st.session_state.summary_generated = False
-                    if 'summary' in st.session_state:
-                        del st.session_state.summary
-                    st.rerun()
-            with col2:
-                if st.button("Delete Entry"):
-                    delete_entry(entry_id)
-                    st.success("Entry deleted successfully!")
-                    del st.session_state.selected_entry
-                    st.rerun()
-        else:
-            # New entry interface
-            st.subheader("Share your reflections for today 🧘🏻")
-            
-            # Display chat messages
-            for message in st.session_state.messages:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
 
-            # Chat input
-            if not st.session_state.conversation_ended and (prompt := st.chat_input("How are you feeling right now?")):
-                # Set first_response_given to True
-                st.session_state.first_response_given = True
-                # Add user message to chat history
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                with st.chat_message("user"):
-                    st.markdown(prompt)
-
-                # Prepare messages for API call
-                system_message = f"You are a close confidante. Your friend, {st.session_state.user_name}, will tell you how they are feeling and what's on their mind. Listen intently, prompt them to open up and share more about their thoughts and feelings without judgement. Be a friendly, supportive presence, and give a neutral, safe and comfortable tone. Compliment and encourage your friend as much as possible."
-                
-                messages = [
-                    {"role": "system", "content": system_message},
-                ] + [
-                    {"role": msg["role"], "content": msg["content"]}
-                    for msg in st.session_state.messages
-                ]
-
-                # Create a placeholder for the assistant's response
-                with st.chat_message("assistant"):
-                    message_placeholder = st.empty()
-                    full_response = ""
-
-                # Stream the response
-                for chunk in client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=messages,
-                    temperature=0.1,
-                    stream=True,
-                ):
-                    if chunk.choices[0].delta.content is not None:
-                        full_response += chunk.choices[0].delta.content
-                        message_placeholder.markdown(full_response + "▌")
-                
-                # Remove the blinking cursor
-                message_placeholder.markdown(full_response)
-
-                # Add assistant message to chat history
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
-
-            # End Conversation and Log Journal Entry button
-            if st.session_state.first_response_given and not st.session_state.conversation_ended and not st.session_state.summary_generated:
-                if st.button("Finish Conversation and Log Entry"):
-                    st.session_state.conversation_ended = True
-                    with st.spinner("Generating your journal entry summary, detecting emotions, people, and topics..."):
-                        summary = generate_summary(st.session_state.messages)
-                        emotions = detect_emotions(st.session_state.messages)
-                        people = detect_people(st.session_state.messages)
-                        topics = detect_topics(st.session_state.messages)
-                    
-                    # Save summary, emotions, people, and topics to database
-                    save_to_db(st.session_state.user_email, st.session_state.user_name, summary, emotions, people, topics)
-                    
-                    st.session_state.summary = summary
-                    st.session_state.emotions = emotions
-                    st.session_state.people = people
-                    st.session_state.topics = topics
-                    st.session_state.summary_generated = True
-                    st.rerun()  # Force a rerun to update the UI
-
-            # Display summary, emotions, people, and topics if they have been generated
-            if st.session_state.summary_generated:
-                st.success("Great job reflecting on your day! Here's your journal entry summary:")
-                st.markdown(st.session_state.summary)
-                
-                # Display emotions with colored tags
-                st.write("Detected emotions:")
-                emotion_html = "".join(emotion_tag(e.strip()) for e in st.session_state.emotions.split(','))
-                st.markdown(emotion_html, unsafe_allow_html=True)
-                
-                # Display people with colored tags
-                st.write("People mentioned:")
-                people_html = "".join(people_tag(p.strip()) for p in st.session_state.people.split(',') if p.strip() != 'None')
-                st.markdown(people_html if people_html else "No specific people mentioned", unsafe_allow_html=True)
-                
-                # Display topics with colored tags
-                st.write("Topics discussed:")
-                topics_html = "".join(topic_tag(t.strip()) for t in st.session_state.topics.split(',') if t.strip() != 'None')
-                st.markdown(topics_html if topics_html else "No specific topics identified", unsafe_allow_html=True)
-
-            # Display a message if the conversation has ended
-            if st.session_state.conversation_ended:
-                if st.button("Log a New Entry"):
-                    st.session_state.conversation_ended = False
-                    st.session_state.messages = []
-                    st.session_state.first_response_given = False
-                    st.session_state.summary_generated = False
-                    if 'summary' in st.session_state:
-                        del st.session_state.summary
-                    st.rerun()
+        # Display a message if the conversation has ended
+        if st.session_state.conversation_ended:
+            if st.button("Log a New Entry"):
+                st.session_state.conversation_ended = False
+                st.session_state.messages = []
+                st.session_state.first_response_given = False
+                st.session_state.summary_generated = False
+                if 'summary' in st.session_state:
+                    del st.session_state.summary
+                st.rerun()
     else:
         st.info("Enter your email and name in the sidebar to start journaling.")
 
