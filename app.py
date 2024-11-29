@@ -578,8 +578,8 @@ elif st.session_state.page == "past_entries":
         if selected_emotions:
             filtered_entries = [
                 entry for entry in filtered_entries
-                if any(emotion.strip() in selected_emotions 
-                      for emotion in entry[4].split(','))
+                if any(emotion.strip() in selected_emotions # If any emotion in the entry matches the selected emotions, then include the entry in filtered_entries.
+                      for emotion in entry[4].split(',')) #4 cos emotions is the 5th column in entries
             ]
         
         if selected_people:
@@ -587,7 +587,7 @@ elif st.session_state.page == "past_entries":
                 entry for entry in filtered_entries
                 if entry[5] != 'None' and
                 any(person.strip() in selected_people 
-                    for person in entry[5].split(','))
+                    for person in entry[5].split(',')) #5 cos people is the 6th column in entries
             ]
             
         if selected_topics:
@@ -595,7 +595,7 @@ elif st.session_state.page == "past_entries":
                 entry for entry in filtered_entries
                 if entry[6] != 'None' and
                 any(topic.strip() in selected_topics 
-                    for topic in entry[6].split(','))
+                    for topic in entry[6].split(',')) #6 cos topics is the 7th column in entries
             ]
         
         # Display filtered entries
