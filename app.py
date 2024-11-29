@@ -532,8 +532,75 @@ elif st.session_state.page == "past_entries":
     
     entries = get_past_entries(st.session_state.user_email)
     if entries:
+        # Create sets of unique emotions, people, and topics from all entries
+        all_emotions = set()
+        all_people = set()
+        all_topics = set()
+        
+        for _, _, _, _, emotions, people, topics in entries:
+            all_emotions.update([e.strip() for e in emotions.split(',')])
+            if people != 'None':
+                all_people.update([p.strip() for p in people.split(',')])
+            if topics != 'None':
+                all_topics.update([t.strip() for t in topics.split(',')])
+        
+        # Convert sets to sorted lists
+        all_emotions = sorted(list(all_emotions))
+        all_people = sorted(list(all_people))
+        all_topics = sorted(list(all_topics))
+        
+        # Create filter columns
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            selected_emotions = st.multiselect(
+                "Filter by Emotions",
+                all_emotions,
+                placeholder="Select emotions..."
+            )
+            
+        with col2:
+            selected_people = st.multiselect(
+                "Filter by People",
+                all_people,
+                placeholder="Select people..."
+            )
+            
+        with col3:
+            selected_topics = st.multiselect(
+                "Filter by Topics",
+                all_topics,
+                placeholder="Select topics..."
+            )
+        
+        # Filter entries based on selections
+        filtered_entries = entries
+        if selected_emotions:
+            filtered_entries = [
+                entry for entry in filtered_entries
+                if any(emotion.strip() in selected_emotions 
+                      for emotion in entry[4].split(','))
+            ]
+        
+        if selected_people:
+            filtered_entries = [
+                entry for entry in filtered_entries
+                if entry[5] != 'None' and
+                any(person.strip() in selected_people 
+                    for person in entry[5].split(','))
+            ]
+            
+        if selected_topics:
+            filtered_entries = [
+                entry for entry in filtered_entries
+                if entry[6] != 'None' and
+                any(topic.strip() in selected_topics 
+                    for topic in entry[6].split(','))
+            ]
+        
+        # Display filtered entries
         current_date = None
-        for entry_id, date, time, summary, emotions, people, topics in entries:
+        for entry_id, date, time, summary, emotions, people, topics in filtered_entries:
             if date != current_date:
                 st.header(date)
                 current_date = date
@@ -561,6 +628,9 @@ elif st.session_state.page == "past_entries":
                     delete_entry(entry_id)
                     st.success("Entry deleted successfully!")
                     st.rerun()
+                    
+        if not filtered_entries:
+            st.info("No entries match the selected filters.")
     else:
         st.info("No past entries found.")
     
