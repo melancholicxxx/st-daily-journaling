@@ -537,8 +537,8 @@ elif st.session_state.page == "past_entries":
         all_people = set()
         all_topics = set()
         
-        for _, _, _, _, emotions, people, topics in entries:
-            all_emotions.update([e.strip() for e in emotions.split(',')])
+        for _, _, _, _, emotions, people, topics in entries: # _ means fields we don't need in entries. We only need emotions, people, and topics.
+            all_emotions.update([e.strip() for e in emotions.split(',')]) # Splits the emotions, people, and topics strings (which are comma-separated) and Updates sets with unique values.
             if people != 'None':
                 all_people.update([p.strip() for p in people.split(',')])
             if topics != 'None':
