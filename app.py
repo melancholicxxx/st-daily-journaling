@@ -709,16 +709,16 @@ elif st.session_state.page == "visualisations":
             hovermode='x unified',
             showlegend=True,
             height=500,
-            # Format x-axis to show only dates
+            # Update x-axis format to show dates as "DD MMM YYYY"
             xaxis=dict(
-                tickformat='%Y-%m-%d',
+                tickformat='%d %b %Y',
                 dtick='D1'  # Show tick for each day
             ),
             # Format y-axis to show only whole numbers
             yaxis=dict(
-                dtick=1,  # Set tick interval to 1
-                tick0=0,  # Start ticks at 0
-                tickmode='linear'  # Use linear tick mode
+                dtick=1,
+                tick0=0,
+                tickmode='linear'
             )
         )
         
@@ -730,7 +730,7 @@ elif st.session_state.page == "visualisations":
         
         # Format the date without time before displaying
         display_df = emotion_counts.reset_index()
-        display_df['Date'] = display_df['Date'].dt.strftime('%Y-%m-%d')
+        display_df['Date'] = display_df['Date'].dt.strftime('%d %b %Y')
         
         st.dataframe(
             display_df.sort_values('Date', ascending=False),
