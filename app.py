@@ -498,7 +498,7 @@ elif st.session_state.page == "rag":
             st.rerun()  # Add this line to update the input box immediately
 
     # Create a single column for the "Analyze" button
-    analyze_button = st.button("Analyze", type="primary")
+    analyze_button = st.button("Analyze Question", type="primary")
 
     if user_query and analyze_button:
         with st.spinner("Analyzing your journal entries..."):
@@ -515,6 +515,10 @@ elif st.session_state.page == "rag":
 
             st.write("Answer:")
             st.write(response.choices[0].message.content)
+
+    # Add horizontal line and Visualisations header
+    st.markdown("---")
+    st.header("Visualisations")
 
     # Clear the selected question when leaving the RAG page
     if st.session_state.page != "rag":
