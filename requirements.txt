@@ -9,3 +9,5 @@ pytz
 numpy
 st-supabase-connection
 streamlit-cookies-controller
+pandas
+plotly

@@ -10,6 +10,8 @@ import streamlit.components.v1 as components
 from st_supabase_connection import SupabaseConnection, execute_query
 from streamlit_cookies_controller import CookieController
 import time
+import pandas as pd
+import plotly.graph_objects as go
 
 # Set page config at the very beginning
 st.set_page_config(layout="wide")
@@ -520,6 +522,11 @@ elif st.session_state.page == "rag":
     st.markdown("---")
     st.header("Visualisations")
 
+    # Add button for mood trends
+    if st.button("See Mood Trends"):
+        st.session_state.page = "visualisations"
+        st.rerun()
+
     # Clear the selected question when leaving the RAG page
     if st.session_state.page != "rag":
         if 'selected_question' in st.session_state:
@@ -642,3 +649,74 @@ elif st.session_state.page == "past_entries":
     if st.button("Back to Journal"):
         st.session_state.page = "main"
         st.rerun()
+
+# Add new elif condition for visualisations page
+elif st.session_state.page == "visualisations":
+    st.title("Mood Trends")
+
+    # Add a back button
+    if st.button("← Back"):
+        st.session_state.page = "rag"
+        st.rerun()
+
+    # Get all entries for the user
+    entries = get_past_entries(st.session_state.user_email)
+    
+    if entries:
+        # Create a DataFrame for plotting
+        import plotly.graph_objects as go
+        
+        # Extract dates and emotions from entries
+        data = []
+        for _, date, _, _, emotions, _, _ in entries:
+            emotion_list = [e.strip() for e in emotions.split(',')]
+            for emotion in emotion_list:
+                data.append({'Date': pd.to_datetime(date, format='%d %B %Y'), 'Emotion': emotion})
+        
+        df = pd.DataFrame(data)
+        
+        # Count emotions by date
+        emotion_counts = df.pivot_table(
+            index='Date',
+            columns='Emotion',
+            aggfunc=len,
+            fill_value=0
+        )
+
+        # Create stacked bar chart
+        fig = go.Figure()
+        
+        # Add bars for each emotion
+        for emotion in emotion_counts.columns:
+            fig.add_trace(go.Bar(
+                name=emotion,
+                x=emotion_counts.index,
+                y=emotion_counts[emotion],
+                hovertemplate="Date: %{x}<br>" +
+                             f"{emotion}: %{{y}}<br>" +
+                             "<extra></extra>"
+            ))
+
+        # Update layout for better readability
+        fig.update_layout(
+            barmode='stack',
+            title='My Emotions Trend',
+            xaxis_title="Date",
+            yaxis_title="Number of Emotions",
+            legend_title="Emotions",
+            hovermode='x unified',
+            showlegend=True,
+            height=500
+        )
+        
+        # Display the plot
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Add a data table below the chart
+        st.subheader("Daily Emotion Counts")
+        st.dataframe(
+            emotion_counts.reset_index().sort_values('Date', ascending=False),
+            hide_index=True
+        )
+    else:
+        st.info("No entries found to visualize.")
