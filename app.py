@@ -670,12 +670,14 @@ elif st.session_state.page == "visualisations":
         data = []
         for _, date, _, _, emotions, _, _ in entries:
             emotion_list = [e.strip() for e in emotions.split(',')]
-            for emotion in emotion_list:
+            # Count each emotion only once per date
+            unique_emotions = set(emotion_list)
+            for emotion in unique_emotions:
                 data.append({'Date': pd.to_datetime(date, format='%d %B %Y'), 'Emotion': emotion})
         
         df = pd.DataFrame(data)
         
-        # Count emotions by date
+        # Count emotions by date (now each emotion will be counted only once per date)
         emotion_counts = df.pivot_table(
             index='Date',
             columns='Emotion',
