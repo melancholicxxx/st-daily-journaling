@@ -708,7 +708,18 @@ elif st.session_state.page == "visualisations":
             legend_title="Emotions",
             hovermode='x unified',
             showlegend=True,
-            height=500
+            height=500,
+            # Format x-axis to show only dates
+            xaxis=dict(
+                tickformat='%Y-%m-%d',
+                dtick='D1'  # Show tick for each day
+            ),
+            # Format y-axis to show only whole numbers
+            yaxis=dict(
+                dtick=1,  # Set tick interval to 1
+                tick0=0,  # Start ticks at 0
+                tickmode='linear'  # Use linear tick mode
+            )
         )
         
         # Display the plot
@@ -716,8 +727,13 @@ elif st.session_state.page == "visualisations":
         
         # Add a data table below the chart
         st.subheader("Daily Emotion Counts")
+        
+        # Format the date without time before displaying
+        display_df = emotion_counts.reset_index()
+        display_df['Date'] = display_df['Date'].dt.strftime('%Y-%m-%d')
+        
         st.dataframe(
-            emotion_counts.reset_index().sort_values('Date', ascending=False),
+            display_df.sort_values('Date', ascending=False),
             hide_index=True
         )
     else:
